@@ -32,7 +32,7 @@ min_val = MIN(y)
 tmp = SORT(x)
 x = x(tmp)
 
-n = n_elements(x) - 1
+n = n_elements(x)-1
 freq = fltarr(n)
 FOR i=0, n-1 DO BEGIN
 	freq(i) = TOTAL(y LT x(i+1) AND y GE x(i))
