@@ -1,0 +1,40 @@
+;+ 
+; NAME: 
+; RAD_FIT_INFO 
+; 
+; PURPOSE: 
+; This procedure prints information about the radar data loaded in the
+; RAD_DATA_BLK common block, if any.
+; 
+; CATEGORY: 
+; Misc
+; 
+; CALLING SEQUENCE: 
+; RAD_FIT_INFO
+; 
+; EXAMPLE: 
+; 
+; MODIFICATION HISTORY: 
+; Written by Lasse Clausen, Nov, 30 2009
+;-
+pro rad_fit_info
+
+common rad_data_blk
+
+if rad_fit_info.nrecs eq 0L then begin
+	prinfo,' No data loaded.'
+	return
+endif
+
+print, '------'
+print, '  Radar:        ' + rad_fit_info.name + $
+	' (id: ' + string(rad_fit_info.id,format='(I2)') + ', ' + $
+	' code: ' + rad_fit_info.code +')'
+print, '  First Datum:  '+format_juldate(rad_fit_info.sjul)
+print, '  Last Datum:   '+format_juldate(rad_fit_info.fjul)
+print, '  No. of Beams: '+string(rad_fit_info.nrecs,format='(I6)')
+print, '  Scan IDs:     ' + strjoin(string(rad_fit_info.scan_ids,format='(I6)'),', ')
+print, '  No. of Scans: '+string(rad_fit_info.nscans,format='(I6)')
+print, '------'
+
+end

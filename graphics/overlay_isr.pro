@@ -1,0 +1,340 @@
+;+
+; NAME: 
+; OVERLAY_ISR
+;
+; PURPOSE: 
+; This procedure plots a marker at the geodetic/geomagnetic position of the specified
+; ground-based Incoherent Scatter Radar on a panel created by MAP_PLOT_PANEL.
+; 
+; CATEGORY: 
+; Graphics
+; 
+; CALLING SEQUENCE:  
+; OVERLAY_ISR, Stats
+;
+; INPUTS:
+; Stats: A scalar or vector of type string containing the ISR abbreviation. Valid ISR names are
+; SND for Sondrestrom, MSH for Millstone Hill.
+;
+; KEYWORD PARAMETERS:
+; COORDS: Set this keyword to a string indicating the coordinate system in which to plot the position of the station.
+;
+; DATE: Set this keyword to the date for which you want to overlay the FoV. Use this
+; keyword together with TIME instead of the JUL keyword.
+; This keyword only applies when using Magnetic Local Time coordinates.
+;
+; TIME: Set this keyword to the time for which you want to overlay the FoV. Use this
+; keyword together with DATE instead of the JUL keyword.
+; This keyword only applies when using Magnetic Local Time coordinates.
+;
+; JUL: Set this keyword to the Julian Day Number to use for the plotting of the fields-of-view. Use this
+; keyword together instead of the DATE and TIME keyword.
+; This keyword only applies when using Magnetic Local Time coordinates.
+;
+; FOV_LINECOLOR: Set this keyword to use as the color for the FoV line.
+;
+; FOV_LINETHICK: Set this keyword to use as the thickness of the FoV line.
+;
+; NO_FILL: Set this keyword and the FoV will not be filled by a gray color.
+;
+; SHOW_FOV: Set this keyword to plot the outlines of the field-of-view of the imager
+; projected to an altitude of FOV_ALTITUDE (default is 250 km).
+;
+; FOV_ALTITUDE: The altitude at which to project the FoV, default is 250 km
+;
+; FOV_MINELEVATION: The minimum elevation from zenith for which to plot the FoV.
+; Default is 30 degree.
+;
+; HEMISPHERE: Set this to 1 to plot the northern hemisphere stations, -1 for the southern hemisphere.
+; Northern is default.
+;
+; ANNOTATE: Set this keyword to put the stations abbreviation next to its marker.
+;
+; ISR_CHARSIZE: Set this keyword to the size with which to plot the stations abbreviation. Only comes into effect 
+; if ANNOTATE is set.
+;
+; ISR_CHARTHICK: Set this keyword to the thickness with which to plot the stations abbreviation. 
+; Only comes into effect if ANNOTATE is set.
+;
+; COLOR: Set this to the color index to use for the marker.
+;
+; BACKGROUND: Set this keyword to a color index to use as a background for the annotations. Only comes into effect 
+; if ANNOTATE is set.
+;
+; ISR_ORIENTATION: Set this keyword to an angle in degree by which to rotate the annotations anti-clockwise. Only 
+; comes into effect if ANNOTATE is set.
+;
+; ROTATE: Set this keyword to a number of degree by which to rotate the FoV
+; clockwise. Make sure that you give the same number of degrees to
+; MAP_PLOT_PANEL and all other plotting routines.
+;
+; SYMSIZE: Set this keyword to the size to use for the marker.
+;
+; OFFSETS: Set this keyword to a 2-element vector or 2xnstats array to use as offsets between the 
+; marker and the annotation. In degree. Default is [0.5, -0.5].
+;
+; SILENT: Set this keyword to surpress warning messages.
+;
+; EXAMPLE:
+;
+; MODIFICATION HISTORY:
+; Written by Lasse Clausen, Dec, 4 2009
+;-
+pro overlay_isr, stats, coords=coords, date=date, time=time, jul=jul, $
+	hemisphere=hemisphere, annotate=annotate, $
+	isr_charsize=isr_charsize, isr_charthick=isr_charthick, $
+	show_fov=show_fov, fov_linecolor=fov_linecolor, fov_linethick=fov_linethick, no_fill=no_fill, $
+	fov_altitude=fov_altitude, fov_minelevation=fov_minelevation, $
+	color=color, $
+	background=background, isr_orientation=isr_orientation, $
+	rotate=rotate, symsize=symsize, offsets=offsets, silent=silent
+
+common rad_data_blk
+
+if n_params() lt 1 then begin
+	prinfo, 'Must give station names.'
+	return
+endif
+valid_stat_names = ['SND', 'MSH']
+geo_lat          = [67.00, 42.61950]
+geo_lon          = [309.2, 288.50827]
+bmsep            = [1.2  , 1.2]
+
+if ~keyword_set(coords) then $
+	coords = get_coordinates()
+
+if ~is_valid_coord_system(coords) then begin
+	prinfo, 'Invalid coordinate system: '+coords
+	return
+endif
+
+; check coordinate system
+if coords ne 'magn' and coords ne 'geog' and coords ne 'mlt' then begin
+	prinfo, 'Coordinate system not supported: '+coords
+	prinfo, 'Using magnetic coordinates.'
+	coords = 'magn'
+endif
+
+if strcmp(strlowcase(coords), 'mlt') then begin
+	in_mlt = 1
+	_coords = 'magn'
+endif else begin
+	in_mlt = 0
+	_coords = strlowcase(coords)
+endelse
+
+if in_mlt then begin
+	if ~keyword_set(jul) then begin
+		if ~keyword_set(time) then $
+			time = 1200
+		if keyword_set(date) then begin
+			sfjul, date, time, jul
+		endif else begin
+			if ~keyword_set(silent) then $
+				prinfo, 'No JUL given, trying for scan date.'
+			if rad_fit_info.nrecs gt 0L then $
+				jul = rad_fit_data.juls[0] $
+			else begin
+				prinfo, 'No data loaded.'
+				return
+			endelse
+		endelse
+	endif
+	caldat, jul, mm, dd, year
+	ut_sec = (jul-julday(1,1,year,0,0,0))*86400.d
+endif
+
+if ~keyword_set(hemisphere) then $
+	hemisphere = 1.
+
+if n_elements(color) eq 0 then $
+	color = get_foreground()
+
+if ~keyword_set(isr_orientation) then $
+	isr_orientation = 0.
+
+if ~keyword_set(fov_minelevation) then $
+	fov_minelevation = 30.
+
+if ~keyword_set(fov_altitude) then $
+	fov_altitude = 250.
+
+if ~keyword_set(fov_linethick) then $
+	fov_linethick = 1.
+
+if ~keyword_set(fov_linecolor) then $
+	fov_linecolor = get_foreground()
+
+if ~keyword_set(isr_charthick) then $
+	isr_charthick = 0.
+
+if ~keyword_set(isr_charthick) then $
+	isr_charthick = 1.
+
+if ~keyword_set(symsize) then $
+	symsize = 1.
+
+nstats = n_elements(stats)
+nnstats = 0
+for i=0, nstats-1 do begin
+	ii = where(valid_stat_names eq strupcase(stats[i]), cc)
+	if cc gt 0L then begin
+		if nnstats eq 0 then begin
+			astats = stats[ii]
+			ainds = ii
+			if _coords eq 'geog' then begin
+				lats = geo_lat[ii]
+				lons = geo_lon[ii]
+			endif else if _coords eq 'magn' then begin
+				tmp = cnvcoord(geo_lat[ii], geo_lon[ii], 0.)
+				lats = tmp[0]
+				lons = ( in_mlt ? mlt(year, ut_sec, tmp[1]) : tmp[1] )
+			endif
+		endif else begin
+			astats = [astats, stats[ii]]
+			ainds = [ainds, ii]
+			if _coords eq 'geog' then begin
+				lats = [lats, geo_lat[ii]]
+				lons = [lons, geo_lon[ii]]
+			endif else if _coords eq 'magn' then begin
+				tmp = cnvcoord(geo_lat[ii], geo_lon[ii], 0.)
+				lats = [lats, tmp[0]]
+				lons = [lons, ( in_mlt ? mlt(year, ut_sec, tmp[1]) : tmp[1] )]
+			endif
+		endelse
+		nnstats += 1
+	endif else begin
+		prinfo, 'Station not found: '+stats[i]
+	endelse
+endfor
+nstats = nnstats
+
+if keyword_set(offsets) then begin
+	if n_elements(offsets) eq 2 then $
+		_offsets = rebin(offsets, 2, nstats) $
+	else if n_elements(offsets) eq 2*nstats then $
+		_offsets = offsets[ainds,*] $
+	else begin
+		prinfo, 'OFFSETS must be 2-element vector or 2xnstats element array.'
+		return
+	endelse
+endif else $
+	_offsets = rebin([.5,-.5], 2, nstats)
+
+if keyword_set(show_fov) then begin
+	c = (!re+fov_altitude)
+	a = !re
+	phi = (90.+fov_minelevation)*!dtor
+	; distance from asi to 110km altitude at minelevation
+	b = a*cos(phi) + sqrt( (a*cos(phi))^2 + ( c^2 - a^2 ) )
+	; angle to that point
+	theta = acos( (a^2 + c^2 - b^2)/(2.*a*c) )
+	; distance on the ground
+	; radius of fov in km
+	rad = !re*theta
+	nbeams = 360./1.2
+	bearing = findgen(nbeams+1.)/nbeams*2.*!pi
+	; now calculate the position on the ground
+	; of the fov
+	; we'll do this in geographic coordinates and then
+	; convert those into magn or mlt if needed
+	for i=0, nstats-1 do begin
+		lat1 = geo_lat[ainds[i]]*!dtor
+		lon1 = geo_lon[ainds[i]]*!dtor
+		lat2 = asin( sin(lat1)*cos(theta) + cos(lat1)*sin(theta)*cos(bearing) )
+		lon2 = (lon1 + atan( sin(bearing)*sin(theta)*cos(lat1), cos(theta) - sin(lat1)*sin(lat2) ))
+		if strlowcase(coords) eq 'magn' then begin
+			for k=0, nbeams do begin
+				tmp = cnvcoord(lat2[k]*!radeg, lon2[k]*!radeg, fov_altitude)
+				lat2[k] = tmp[0]*!dtor
+				lon2[k] = tmp[1]*!dtor
+			endfor
+		endif else if strlowcase(coords) eq 'mlt' then begin
+			for k=0, nbeams do begin
+				tmp = cnvcoord(lat2[k]*!radeg, lon2[k]*!radeg, fov_altitude)
+				lat2[k] = tmp[0]*!dtor
+				lon2[k] = (mlt(year,ut_sec,tmp[1])*15.)*!dtor
+			endfor
+		endif
+		ppos = calc_stereo_coords(lat2*!radeg, lon2*!radeg)
+		xx = ppos[0,*]
+		yy = ppos[1,*]
+		if n_elements(rotate) ne 0 then begin
+			_x1 = cos(rotate*!dtor)*xx - sin(rotate*!dtor)*yy
+			_y1 = sin(rotate*!dtor)*xx + cos(rotate*!dtor)*yy
+			xx = _x1
+			yy = _y1
+		endif
+		rpos = calc_stereo_coords(lats[i], lons[i], mlt=in_mlt)
+		rxx = rpos[0]
+		ryy = rpos[1]
+		if n_elements(rotate) ne 0 then begin
+			_x1 = cos(rotate*!dtor)*rxx - sin(rotate*!dtor)*ryy
+			_y1 = sin(rotate*!dtor)*rxx + cos(rotate*!dtor)*ryy
+			rxx = _x1
+			ryy = _y1
+		endif
+		;if keyword_set(rotate) then $
+		;	swap, xx, yy, /right
+		oplot, xx, yy, color=get_background(), thick=3.*fov_linethick, noclip=0
+		oplot, xx, yy, color=fov_linecolor, thick=fov_linethick, noclip=0
+		;for b=0, nbeams-1 do begin
+		;	oplot, [rxx, xx[b]], [ryy, yy[b]]
+		;endfor
+	endfor
+endif
+
+if n_elements(background) ne 0 and keyword_set(annotate) then begin
+	for i=0, nstats-1 do begin
+		ppos = calc_stereo_coords(lats[i], lons[i], mlt=in_mlt)
+		nxoff = _offsets[0,i]*cos(isr_orientation*!dtor) - _offsets[1,i]*sin(isr_orientation*!dtor)
+		nyoff = _offsets[0,i]*sin(isr_orientation*!dtor) + _offsets[1,i]*cos(isr_orientation*!dtor)
+		pos = convert_coord(ppos[0]+nxoff, ppos[1]+nyoff, /data, /to_normal)
+		astring = stats[i]
+		xyouts, 0, 0, astring, charthick=isr_charthick, charsize=-isr_charsize, $
+			width=strwidth, noclip=0
+		tmp = convert_coord([0,0],[0,!d.y_ch_size],/device,/to_normal)
+		strheight = isr_charsize*(tmp[1,1]-tmp[1,0])
+		xx = pos[0]+[0.0, 0.0, strwidth, strwidth, 0.0]
+		yy = pos[1]+[-0.005,strheight,strheight,-0.005,-0.005,-0.005]
+		if n_elements(rotate) ne 0 then begin
+			_x1 = cos(rotate*!dtor)*xx - sin(rotate*!dtor)*yy
+			_y1 = sin(rotate*!dtor)*xx + cos(rotate*!dtor)*yy
+			xx = _x1
+			yy = _y1
+		endif
+		;if keyword_set(rotate) then $
+		;	swap, xx, yy, /right
+		polyfill, xx, yy, noclip=0, /norm, color=background
+	endfor
+endif
+
+load_usersym, /circle
+
+for i=0, nstats-1 do begin ;0 do $ ;
+	ppos = calc_stereo_coords(lats[i], lons[i], mlt=in_mlt)
+	xx = ppos[0]
+	yy = ppos[1]
+	if n_elements(rotate) ne 0 then begin
+		_x1 = cos(rotate*!dtor)*xx - sin(rotate*!dtor)*yy
+		_y1 = sin(rotate*!dtor)*xx + cos(rotate*!dtor)*yy
+		xx = _x1
+		yy = _y1
+	endif
+	;if keyword_set(rotate) then $
+	;	swap, xx, yy, /right
+	plots, xx, yy, noclip=0, symsize=symsize, $
+		color=get_background(), psym=8
+	plots, xx, yy, noclip=0, symsize=.7*symsize, color=color, psym=8
+	if keyword_set(annotate) then begin
+		astring = strupcase(stats[i])
+		nxoff = _offsets[0,i]*cos(isr_orientation*!dtor) - _offsets[1,i]*sin(isr_orientation*!dtor)
+		nyoff = _offsets[0,i]*sin(isr_orientation*!dtor) + _offsets[1,i]*cos(isr_orientation*!dtor)
+		xyouts, xx+nxoff, yy+nyoff, astring, charthick=10.*isr_charthick, color=get_white(), $
+			charsize=asi_charsize, orientation=isr_orientation, noclip=0
+		xyouts, xx+nxoff, yy+nyoff, astring, charthick=2.*isr_charthick, $
+			charsize=isr_charsize, orientation=isr_orientation, noclip=0
+	endif
+endfor
+
+end
