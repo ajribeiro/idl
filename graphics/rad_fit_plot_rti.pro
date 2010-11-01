@@ -1,21 +1,21 @@
-;+ 
-; NAME: 
+;+
+; NAME:
 ; RAD_FIT_PLOT_RTI
-; 
-; PURPOSE: 
-; This procedure plots a series of Range-Time plots on a page. With 
+;
+; PURPOSE:
+; This procedure plots a series of Range-Time plots on a page. With
 ; title, color bar.
-; 
-; CATEGORY:  
+;
+; CATEGORY:
 ; Graphics
-; 
-; CALLING SEQUENCE: 
+;
+; CALLING SEQUENCE:
 ; RAD_FIT_PLOT_RTI
 ;
 ; KEYWORD PARAMETERS:
 ; ALL: If set, all beams (0-16) are plotted in seperate panels.
 ;
-; DATE: A scalar or 2-element vector giving the time range to plot, 
+; DATE: A scalar or 2-element vector giving the time range to plot,
 ; in YYYYMMDD or MMMYYYY format.
 ;
 ; TIME: A 2-element vector giving the time range to plot, in HHII format.
@@ -51,14 +51,15 @@
 ;
 ; NO_TITLE: Set this keyword to surpress plotting of a title.
 ;
-; AJ: Load AJ's colors for the velocities.
+; GROUND: Set this keyword to a velocity value and all velocities
+; -ground <= vel <= ground will be colored in gray.
 ;
 ; COMMON BLOCKS:
 ; RAD_DATA_BLK: The common block holding radar data.
 ;
-; EXAMPLE: 
-; 
-; MODIFICATION HISTORY: 
+; EXAMPLE:
+;
+; MODIFICATION HISTORY:
 ; Based on Steve Milan's PLOT_RTI.
 ; Written by Lasse Clausen, Nov, 24 2009
 ;-
@@ -153,7 +154,7 @@ clear_page
 
 ; loop through panels
 for b=0, npanels-1 do begin
-	
+
 	ascale = 0
 
 	if n_elements(param) gt 1 then begin
@@ -178,7 +179,7 @@ for b=0, npanels-1 do begin
 	last = 0
 	if ymap eq ymaps-1 then $
 		last = 1
-	
+
 	; plot an rti panel for each beam
 	rad_fit_plot_rti_panel, xmaps, ymaps, xmap, ymap, /bar, $
 		date=date, time=time, long=long, $
