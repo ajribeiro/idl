@@ -1,17 +1,17 @@
-;+ 
-; NAME: 
+;+
+; NAME:
 ; RAD_LOAD_COLORTABLE
-; 
-; PURPOSE: 
+;
+; PURPOSE:
 ; This procedure loads colortables for various purposes. By default
 ; it loads a colortable based on AJ Ribiero's colors. Through keywords
 ; is can also load the Leicester/Cutlass/SuperDARN color table from the file
 ; GETENV('RAD_RESOURCE_PATH')+'/cut_col_tab.dat' and others.
-; 
-; CATEGORY: 
+;
+; CATEGORY:
 ; Graphics
-; 
-; CALLING SEQUENCE: 
+;
+; CALLING SEQUENCE:
 ; RAD_LOAD_COLORTABLE
 ;
 ; KEYWORDS:
@@ -23,16 +23,16 @@
 ; BLUEWHITERED: Set this keyword to load a color table ranging from blue (lowest)
 ; through light gray (middle) to red (highest).
 ;
-; INVERSE: Set this keyword to 
+; INVERSE: Set this keyword to
 ;
-; COMMON BLOCKS: 
+; COMMON BLOCKS:
 ; USER_PREFS: User preferences.
 ;
 ; COLOR_PREFS: Color preferences.
 ;
-; EXAMPLE: 
-; 
-; MODIFICATION HISTORY: 
+; EXAMPLE:
+;
+; MODIFICATION HISTORY:
 ; Based on Steve Milan's CUT_COL_TAB.
 ; Written by Lasse Clausen, Nov, 24 2009
 ;-
@@ -49,13 +49,13 @@ if keyword_set(leicester) then begin
 	endif
 	restore, tab_file
 	tvlct, red, green, blue
-	cp_colortable = 'LEICESTER'
+	set_colortable, 'LEICESTER'
 	return
 endif
 
 if keyword_set(themis) then begin
 	loadct2, 43
-	cp_colortable = 'THEMIS'
+	set_colortable, 'THEMIS'
 	return
 endif
 
@@ -77,7 +77,7 @@ if keyword_set(whitered) then BEGIN
 	red   = findgen(ncolors)*(1.-gray_base) + (ncolors-1.)*gray_base
 	green = ((ncolors-1.)-findgen(ncolors))*gray_base
 	blue  = ((ncolors-1.)-findgen(ncolors))*gray_base
-	cp_colortable = 'WHITERED'
+	set_colortable, 'WHITERED'
 ENDIF ELSE if keyword_set(bluewhitered) then BEGIN
 	gray_base=0.95
 	red[0:ncolors/2-1]         = reverse(((ncolors-1.)-2.*findgen(ncolors/2))*gray_base)
@@ -86,7 +86,7 @@ ENDIF ELSE if keyword_set(bluewhitered) then BEGIN
 	red[ncolors/2:ncolors-1]   = 2.*findgen(ncolors/2+1)*(1.-gray_base) + (ncolors-1.)*gray_base
 	green[ncolors/2:ncolors-1] = ((ncolors-1.)-2.*findgen(ncolors/2+1))*gray_base
 	blue[ncolors/2:ncolors-1]  = ((ncolors-1.)-2.*findgen(ncolors/2+1))*gray_base
-	cp_colortable = 'BLUEWHITERED'
+	set_colortable, 'BLUEWHITERED'
 endif else if keyword_set(aj) then begin
 	rcol = reverse(shift(reverse([ 37,     255,     255,     255,     124,       0,       0,       0]), 4))
 	gcol = reverse(shift(reverse([255,     248,     135,      23,       0,       6,     209,     255]), 4))
@@ -98,7 +98,7 @@ endif else if keyword_set(aj) then begin
 		green[findgen(d+(i eq nncolors-2))+i*d] = gcol[i]+findgen(d+(i eq nncolors-2))/float(d-1+(i eq nncolors-2))*(gcol[i+1]-gcol[i])
 		blue[findgen(d+(i eq nncolors-2))+i*d] = bcol[i]+findgen(d+(i eq nncolors-2))/float(d-1+(i eq nncolors-2))*(bcol[i+1]-bcol[i])
 	endfor
-	cp_colortable = 'AJ'
+	set_colortable, 'AJ'
 endif
 
 ored   = bytarr(256)
