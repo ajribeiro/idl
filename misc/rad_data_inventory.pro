@@ -1,6 +1,9 @@
-pro rad_data_inventory
+pro rad_data_inventory, date=date, ofile=ofile
 
 common radarinfo
+
+if ~keyword_set(ofile) then $
+	ofile = '/home/davit/scripts/inv.ps'
 
 ; load colors
 rad_load_colortable
@@ -39,17 +42,7 @@ root_dir = '/sd-data/'
 formats = ['dat','fit','rawacf','fitacf','fitex','grd','vtgrd','grdex','map','mapex']
 nformats = n_elements(formats)
 
-;clear_page
-;; plot legend
-;plot, [0,0], /nodata, xstyle=5, xrange=[0,1], $
-;	ystyle=5, yrange=[0,nformats], $
-;	pos=define_panel(1,1,0,0)
-;for f=0, nformats-1 do begin
-;	polyfill, [0,1,1,0,0], [f,f,f+1,f+1,f], color=f+1
-;endfor
-;return
-
-; the last not_rad formats are only valid for 
+; the last not_rad formats are only valid for
 ; hemispheres, not radars
 not_rad = 5.
 
@@ -94,19 +87,25 @@ oradars = network[tmp].code[1]
 oradars = [oradars, 'buggaboo', 'buggaboo']
 nradars = n_elements(radars)
 
-ydirs = file_search(root_dir+'*')
-yn = strmatch(ydirs, '/sd-data/[0-9][0-9][0-9][0-9]')
-if total(yn) eq 0 then begin
-	prinfo, 'No data found for any year.'
-	return
-endif 
-years = strmid(ydirs[where(yn)],9,4)
+if ~keyword_set(date) then begin
+	ydirs = file_search(root_dir+'*')
+	yn = strmatch(ydirs, root_dir+'[0-9][0-9][0-9][0-9]')
+	if total(yn) eq 0 then begin
+		prinfo, 'No data found for any year.'
+		return
+	endif
+	years = strmid(ydirs[where(yn)],strlen(root_dir),4)
+endif else begin
+	sfjul, date, [0,2400], sjul, fjul, no_days=nd, /jul_to
+	parse_date, date[0], yy, mm, dd
+	years = [yy]
+endelse
 nyears = n_elements(years)
 
 pos = [.075,.05,.95,.85]
 
 set_format, /portrait, /sardines
-ps_open, '/home/davit/scripts/inv.ps'
+ps_open, ofile
 
 for y=0, nyears-1 do begin
 ;for y=14, 14 do begin
@@ -154,17 +153,17 @@ for y=0, nyears-1 do begin
 			continue
 
 		for r=0, nradars-1 do begin
-			
+
 			adir = root_dir+years[y]+'/'+formats[f]+'/'+radars[r]
 			if ~file_test(adir) or (file_test(adir, /dir) and file_test(adir, /symlink)) then $
 				adir = root_dir+years[y]+'/'+formats[f]+'/'+oradars[r]
-			
+
 			if ~file_test(adir) then $
 				continue
 
 			if file_test(adir, /dir) and file_test(adir, /symlink) then $
 				continue
-			
+
 			files = file_search(adir + $
 				'/'+regex[f]+'*', count=fc)
 			for i=0L, fc-1L do begin
@@ -184,10 +183,10 @@ for y=0, nyears-1 do begin
 ;							((nformats-not_rad)/not_rad*([f,f,f+1,f+1,f] mod (nformats-not_rad))) : $
 							((nformats-not_rad)/not_rad*([f,f,f+1,f+1,f]-not_rad)) : $
 							[f,f,f+1,f+1,f]), $
-					color=f+1
+					color=f+1, noclip=0
 			endfor
 ;			print, adir, ' -> ', regex[f]
-			
+
 		endfor
 
 	endfor

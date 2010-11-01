@@ -1,13 +1,13 @@
-;+ 
-; NAME: 
+;+
+; NAME:
 ; RAD_FIT_PLOT_RTI_PANEL
-; 
-; PURPOSE: 
-; 
-; CATEGORY:  
+;
+; PURPOSE:
+;
+; CATEGORY:
 ; Graphics
-; 
-; CALLING SEQUENCE: 
+;
+; CALLING SEQUENCE:
 ; RAD_FIT_PLOT_RTI_PANEL
 ;
 ; OPTIONAL INPUTS:
@@ -24,7 +24,7 @@
 ; Default is 0.
 ;
 ; KEYWORD PARAMETERS:
-; DATE: A scalar or 2-element vector giving the time range to plot, 
+; DATE: A scalar or 2-element vector giving the time range to plot,
 ; in YYYYMMDD or MMMYYYY format.
 ;
 ; TIME: A 2-element vector giving the time range to plot, in HHII format.
@@ -54,7 +54,7 @@
 ;
 ; CHARTHICK: Set this keyword to change the font thickness.
 ;
-; CHARSIZE: Set this keyword to change the font size. 
+; CHARSIZE: Set this keyword to change the font size.
 ;
 ; XSTYLE: Set this keyword to change the style of the x axis.
 ;
@@ -97,9 +97,9 @@
 ; COMMON BLOCKS:
 ; RAD_DATA_BLK: The common block holding radar data.
 ;
-; EXAMPLE: 
-; 
-; MODIFICATION HISTORY: 
+; EXAMPLE:
+;
+; MODIFICATION HISTORY:
 ; Based on Steve Milan's PLOT_RTI.
 ; Written by Lasse Clausen, Nov, 24 2009
 ;-
@@ -108,7 +108,7 @@ pro rad_fit_plot_rti_panel, xmaps, ymaps, xmap, ymap, $
 	param=param, beam=beam, channel=channel, scan_id=scan_id, $
 	coords=coords, yrange=yrange, scale=scale, $
 	freq_band=freq_band, silent=silent, bar=bar, $
-	charthick=charthick, charsize=charsize, $ 
+	charthick=charthick, charsize=charsize, $
 	xstyle=xstyle, ystyle=ystyle, xtitle=xtitle, ytitle=ytitle, $
 	xticks=xticks, xminor=xminor, yticks=yticks, yminor=yminor, $
 	xtickformat=xtickformat, ytickformat=ytickformat, $
@@ -356,8 +356,8 @@ cin =    FIX(FINDGEN(color_steps)/(color_steps-1.)*(ncolors-1))+bottom
 lvl = scale[0]+FINDGEN(color_steps)*(scale[1]-scale[0])/color_steps
 IF param EQ 'velocity' then begin
 	if strcmp(get_colortable(), 'bluewhitered', /fold) or strcmp(get_colortable(), 'leicester', /fold) THEN $
-		cin = ROTATE(cin, 2) $
-	else $
+		cin = ROTATE(cin, 2)
+	if strcmp(get_colortable(), 'aj', /fold) or strcmp(get_colortable(), 'bw', /fold) or strcmp(get_colortable(), 'whitered', /fold) THEN $
 		cin = shift(cin, color_steps/2)
 endif
 
@@ -373,7 +373,7 @@ rad_define_beams, (*rad_fit_info[data_index]).id, (*rad_fit_info[data_index]).nb
 ; Cycle through beams to plot
 FOR b=0L, nbeam_inds-2L DO BEGIN
 
-	; If lag to first range or gate length has changed then update 
+	; If lag to first range or gate length has changed then update
 	; field-of-view info
 	IF (*rad_fit_data[data_index]).lagfr[beam_inds[b]] NE old_lagfr OR $
 		(*rad_fit_data[data_index]).smsep[beam_inds[b]] NE old_smsep THEN BEGIN
@@ -421,7 +421,7 @@ FOR b=0L, nbeam_inds-2L DO BEGIN
 					col = get_gray() $
 			ELSE $
 				col = cin[color_ind]
-			
+
 			; finally plot the point
 			POLYFILL,[start_time,start_time,end_time,end_time], $
 					[fov_loc_center[0,beam,r],fov_loc_center[0,beam,r+1], $
@@ -461,7 +461,7 @@ endif
 
 ; "over"plot axis
 plot, [0,0], /nodata, position=position, $
-	charthick=charthick, charsize=charsize, $ 
+	charthick=charthick, charsize=charsize, $
 	yrange=yrange, xrange=xrange, $
 	xstyle=xstyle, ystyle=ystyle, xtitle=_xtitle, ytitle=_ytitle, $
 	xticks=xticks, xminor=_xminor, yticks=yticks, yminor=yminor, $
