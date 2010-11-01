@@ -1,4 +1,4 @@
-function set_colortable
+function set_colortable, colortable
 
 common color_prefs
 
