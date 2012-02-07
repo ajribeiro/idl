@@ -58,6 +58,77 @@
 ; COMMON BLOCKS:
 ; RAD_DATA_BLK: The common block holding map data.
 ;
+; EXAMPLE:
+;
+; COPYRIGHT:
+; Non-Commercial Purpose License
+; Copyright © November 14, 2006 by Virginia Polytechnic Institute and State University
+; All rights reserved.
+; Virginia Polytechnic Institute and State University (Virginia Tech) owns the DaViT
+; software and its associated documentation (“Software”). You should carefully read the
+; following terms and conditions before using this software. Your use of this Software
+; indicates your acceptance of this license agreement and all terms and conditions.
+; You are hereby licensed to use the Software for Non-Commercial Purpose only. Non-
+; Commercial Purpose means the use of the Software solely for research. Non-
+; Commercial Purpose excludes, without limitation, any use of the Software, as part of, or
+; in any way in connection with a product or service which is sold, offered for sale,
+; licensed, leased, loaned, or rented. Permission to use, copy, modify, and distribute this
+; compilation for Non-Commercial Purpose is hereby granted without fee, subject to the
+; following terms of this license.
+; Copies and Modifications
+; You must include the above copyright notice and this license on any copy or modification
+; of this compilation. Each time you redistribute this Software, the recipient automatically
+; receives a license to copy, distribute or modify the Software subject to these terms and
+; conditions. You may not impose any further restrictions on this Software or any
+; derivative works beyond those restrictions herein.
+; You agree to use your best efforts to provide Virginia Polytechnic Institute and State
+; University (Virginia Tech) with any modifications containing improvements or
+; extensions and hereby grant Virginia Tech a perpetual, royalty-free license to use and
+; distribute such modifications under the terms of this license. You agree to notify
+; Virginia Tech of any inquiries you have for commercial use of the Software and/or its
+; modifications and further agree to negotiate in good faith with Virginia Tech to license
+; your modifications for commercial purposes. Notices, modifications, and questions may
+; be directed by e-mail to Stephen Cammer at cammer@vbi.vt.edu.
+; Commercial Use
+; If you desire to use the software for profit-making or commercial purposes, you agree to
+; negotiate in good faith a license with Virginia Tech prior to such profit-making or
+; commercial use. Virginia Tech shall have no obligation to grant such license to you, and
+; may grant exclusive or non-exclusive licenses to others. You may contact Stephen
+; Cammer at email address cammer@vbi.vt.edu to discuss commercial use.
+; Governing Law
+; This agreement shall be governed by the laws of the Commonwealth of Virginia.
+; Disclaimer of Warranty
+; Because this software is licensed free of charge, there is no warranty for the program.
+; Virginia Tech makes no warranty or representation that the operation of the software in
+; this compilation will be error-free, and Virginia Tech is under no obligation to provide
+; any services, by way of maintenance, update, or otherwise.
+; THIS SOFTWARE AND THE ACCOMPANYING FILES ARE LICENSED “AS IS”
+; AND WITHOUT WARRANTIES AS TO PERFORMANCE OR
+; MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED
+; OR IMPLIED. NO WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS
+; OFFERED. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF
+; THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE,
+; YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
+; CORRECTION.
+; Limitation of Liability
+; IN NO EVENT WILL VIRGINIA TECH, OR ANY OTHER PARTY WHO MAY
+; MODIFY AND/OR REDISTRIBUTE THE PRORAM AS PERMITTED ABOVE, BE
+; LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
+; INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+; INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS
+; OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED
+; BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE
+; WITH ANY OTHER PROGRAMS), EVEN IF VIRGINIA TECH OR OTHER PARTY
+; HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+; Use of Name
+; Users will not use the name of the Virginia Polytechnic Institute and State University nor
+; any adaptation thereof in any publicity or advertising, without the prior written consent
+; from Virginia Tech in each case.
+; Export License
+; Export of this software from the United States may require a specific license from the
+; United States Government. It is the responsibility of any person or organization
+; contemplating export to obtain such a license before exporting.
+;
 ; MODIFICATION HISTORY: 
 ; Written by Lasse Clausen, Dec, 11 2009
 ;-
@@ -67,9 +138,19 @@ pro rad_map_plot, date=date, time=time, long=long, $
 	xrange=xrange, yrange=yrange, $
 	cross=cross, coast=coast, no_fill=no_fill, orig_fan=orig_fan, $
 	model=model, merge=merge, true=true, los=los, grad=grad, $
-	vec_radar_ids=vec_radar_ids, fan_radar_ids=fan_radar_ids
+	vec_radar_ids=vec_radar_ids, fan_radar_ids=fan_radar_ids, $
+	vectors=vectors, potential=potential, efield=efield, $
+	comp_east_west=comp_east_west, comp_north_south=comp_north_south
 
 common rad_data_blk
+
+if ~keyword_set(vectors) and ~keyword_set(potential) and ~keyword_set(efield) then begin
+	if ~keyword_set(silent) then $
+		prinfo, 'Nothing selected to plot, choosing vectors and potential.'
+	vectors = 1
+	potential = 1
+	efield = 0
+endif
 
 ; check hemisphere and north and south
 if ~keyword_set(hemisphere) then begin
@@ -101,6 +182,9 @@ if rad_map_info[int_hemi].nrecs eq 0L then begin
 	return
 endif
 
+if n_elements(index) ne 0 then $
+	sfjul, date, time, (*rad_map_data[int_hemi]).mjuls[index], /jul
+
 if ~keyword_set(date) then begin
 	if ~keyword_set(silent) then $
 		prinfo, 'No DATE given, trying for scan date.'
@@ -111,14 +195,14 @@ endif
 if n_elements(time) lt 1 then $
 	time = 1200
 
-if n_elements(index) ne 0 then $
-	sfjul, date, time, (*rad_map_data[int_hemi]).mjuls[index], /jul
-
 sfjul, date, time, sjul, fjul
 
 ; sample time of maps
 ; in minutes
-dt = mean(deriv((*rad_map_data[int_hemi]).mjuls*1440.d))
+if rad_map_info[int_hemi].nrecs ge 3L then $
+	dt = mean(deriv((*rad_map_data[int_hemi]).mjuls*1440.d)) $
+else $
+	dt = 2.
 
 ; account for sjul being before the
 ; date/time of the first map
@@ -169,6 +253,19 @@ endelse
 clear_page
 set_format, /sardi
 
+mpos = define_panel(xmaps, 1, xmaps-1, 0, aspect=aspect, /bar) - [.06, .075, .06, .075]
+if ~keyword_set(new_page) then begin
+	cb_pos = define_cb_position(mpos, height=50, gap=.2*(mpos[2]-mpos[0]))
+	if keyword_set(vectors) then $
+		plot_colorbar, /square, scale=scale, parameter='velocity', position=cb_pos, $
+			/no_rotate
+	if keyword_set(orig_fan) then begin
+		cb_pos = define_cb_position(mpos, height=50, gap=.13*(mpos[2]-mpos[0]))
+		plot_colorbar, /square, scale=.5*[-scale[1],scale[1]], parameter='velocity', $
+			/left, position=cb_pos, legend=' '
+	endif
+endif
+
 ; loop through panels
 for b=0, npanels-1 do begin
 	
@@ -177,7 +274,7 @@ for b=0, npanels-1 do begin
 
 	; calculate index from date and time
 	if n_elements(index) eq 0 then begin
-		dd = min( abs( (*rad_map_data[int_hemi]).sjuls-asjul ), _index)
+		dd = min( abs( (*rad_map_data[int_hemi]).mjuls-asjul ), _index)
 		; check if time ditance is not too big
 		if dd*1440.d gt 60. then $
 			prinfo, 'Map found, but '+string(dd*1440.d,format='(I4)')+' minutes off chosen time.'
@@ -200,11 +297,10 @@ for b=0, npanels-1 do begin
 	endelse
 
 	if b eq 0 or keyword_set(new_page) then begin
-		mpos = define_panel(xmaps, 1, xmaps-1, 0, aspect=aspect, /bar) - [.06, .075, .06, .075]
 		opos = define_panel(1, 1, 0, 0, aspect=aspect, /bar) - [.06, .075, .06, .075]
 		orange = [amjul + [-1.d,1.d]*30.d/1440.d]
 		sfjul, odate, otime, orange, /jul_to
-		omn_read, odate, time=otime, /force
+		omn_read, odate, time=otime, /force, /silent
 		oopos = [opos[0], opos[3]+.01, opos[2], opos[3]+.1]
 		omn_plot_panel, date=odate, time=otime, position=oopos, yrange=[-10,10], /ystyle, $
 			param='by_gsm', yticks=2, charsize=get_charsize(1,2), xstyle=1, /first, linecolor=get_gray(), ytitle=' ', linethick=2
@@ -232,12 +328,29 @@ for b=0, npanels-1 do begin
 		oplot, replicate(amjul,2), !y.crange, linestyle=2, color=252
 	endif
 
-	factor = 1.*2000./(scale[1]-scale[0])
-
 	if ~keyword_set(position) then $
 		_position = define_panel(xmaps, ymaps, xmap, ymap, aspect=aspect, /bar) - [.06, .075, .06, .075] $
 	else $
 		_position = position
+
+	rad_map_plot_imf, xmaps, ymaps, xmap, ymap, gap=.05*get_charsize(xmaps,ymaps), $
+		index=_index, size=.125/sqrt(xmaps > ymaps)*(_position[2]-_position[0]), $
+    int_hemisphere=int_hemi, panel_position=_position
+
+	;rad_map_plot_vector_scale, xmaps, ymaps, xmap, ymap, gap=.05*get_charsize(xmaps,ymaps), $
+	;	scale=scale, xrange=xrange, factor=factor*480., panel_position=_position
+
+	if keyword_set(new_page) then begin
+		cb_pos = define_cb_position(_position, height=50, gap=.2*(_position[2]-_position[0]))
+		if keyword_set(vectors) then $
+			plot_colorbar, /square, scale=scale, parameter='velocity', position=cb_pos, $
+				/no_rotate
+		if keyword_set(orig_fan) then begin
+			cb_pos = define_cb_position(_position, height=50, gap=.13*(_position[2]-_position[0]))
+			plot_colorbar, /square, scale=.5*[-scale[1],scale[1]], parameter='velocity', $
+				/left, position=cb_pos, legend=' '
+		endif
+	endif
 
 	rad_map_plot_panel, xmaps, ymaps, xmap, ymap, $
 		date=date, time=time, long=long, $
@@ -247,40 +360,13 @@ for b=0, npanels-1 do begin
 		model=model, merge=merge, true=true, los=los, grad=grad, $
 		xrange=xrange, yrange=yrange, factor=factor, orig_fan=orig_fan, $
 		vec_radar_ids=vec_radar_ids, fan_radar_ids=fan_radar_ids, $
-		position=_position
+		position=_position, /fill, $
+		vectors=vectors, potential=potential, efield=efield, $
+		comp_east_west=comp_east_west, comp_north_south=comp_north_south
 
 	rad_map_plot_title, position=_position, index=_index, $
-		charsize=get_charsize(1,2), int_hemisphere=int_hemi
-
-	rad_map_plot_imf, xmaps, ymaps, xmap, ymap, gap=.05*get_charsize(xmaps,ymaps), $
-		index=_index, size=.125/sqrt(xmaps > ymaps)*(_position[2]-_position[0]), $
-    int_hemisphere=int_hemi, tposition=_position
-
-	rad_map_plot_vector_scale, xmaps, ymaps, xmap, ymap, gap=.05*get_charsize(xmaps,ymaps), $
-		scale=scale, xrange=xrange, factor=factor, tposition=_position
-
-	if keyword_set(new_page) then begin
-		cb_pos = define_cb_position(_position, height=50, gap=.2*(_position[2]-_position[0]))
-		plot_colorbar, /square, scale=scale, parameter='velocity', position=cb_pos, $
-			/no_rotate
-		if keyword_set(orig_fan) then begin
-			cb_pos = define_cb_position(_position, height=50, gap=.13*(_position[2]-_position[0]))
-			plot_colorbar, /square, scale=.5*[-scale[1],scale[1]], parameter='velocity', $
-				/left, position=cb_pos, legend=' '
-		endif
-	endif
+		charsize=get_charsize(1,2), int_hemisphere=int_hemi, /silent
 
 endfor
-
-if ~keyword_set(new_page) then begin
-	cb_pos = define_cb_position(mpos, height=50, gap=.2*(mpos[2]-mpos[0]))
-	plot_colorbar, /square, scale=scale, parameter='velocity', position=cb_pos, $
-		/no_rotate
-	if keyword_set(orig_fan) then begin
-		cb_pos = define_cb_position(mpos, height=50, gap=.13*(mpos[2]-mpos[0]))
-		plot_colorbar, /square, scale=.5*[-scale[1],scale[1]], parameter='velocity', $
-			/left, position=cb_pos, legend=' '
-	endif
-endif
 
 end

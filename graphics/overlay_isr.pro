@@ -75,7 +75,78 @@
 ;
 ; SILENT: Set this keyword to surpress warning messages.
 ;
+; AZIM: Set this keyword to an array of azimuth for which you want to plot the beams of the ISR
+;
 ; EXAMPLE:
+;
+; COPYRIGHT:
+; Non-Commercial Purpose License
+; Copyright © November 14, 2006 by Virginia Polytechnic Institute and State University
+; All rights reserved.
+; Virginia Polytechnic Institute and State University (Virginia Tech) owns the DaViT
+; software and its associated documentation (“Software”). You should carefully read the
+; following terms and conditions before using this software. Your use of this Software
+; indicates your acceptance of this license agreement and all terms and conditions.
+; You are hereby licensed to use the Software for Non-Commercial Purpose only. Non-
+; Commercial Purpose means the use of the Software solely for research. Non-
+; Commercial Purpose excludes, without limitation, any use of the Software, as part of, or
+; in any way in connection with a product or service which is sold, offered for sale,
+; licensed, leased, loaned, or rented. Permission to use, copy, modify, and distribute this
+; compilation for Non-Commercial Purpose is hereby granted without fee, subject to the
+; following terms of this license.
+; Copies and Modifications
+; You must include the above copyright notice and this license on any copy or modification
+; of this compilation. Each time you redistribute this Software, the recipient automatically
+; receives a license to copy, distribute or modify the Software subject to these terms and
+; conditions. You may not impose any further restrictions on this Software or any
+; derivative works beyond those restrictions herein.
+; You agree to use your best efforts to provide Virginia Polytechnic Institute and State
+; University (Virginia Tech) with any modifications containing improvements or
+; extensions and hereby grant Virginia Tech a perpetual, royalty-free license to use and
+; distribute such modifications under the terms of this license. You agree to notify
+; Virginia Tech of any inquiries you have for commercial use of the Software and/or its
+; modifications and further agree to negotiate in good faith with Virginia Tech to license
+; your modifications for commercial purposes. Notices, modifications, and questions may
+; be directed by e-mail to Stephen Cammer at cammer@vbi.vt.edu.
+; Commercial Use
+; If you desire to use the software for profit-making or commercial purposes, you agree to
+; negotiate in good faith a license with Virginia Tech prior to such profit-making or
+; commercial use. Virginia Tech shall have no obligation to grant such license to you, and
+; may grant exclusive or non-exclusive licenses to others. You may contact Stephen
+; Cammer at email address cammer@vbi.vt.edu to discuss commercial use.
+; Governing Law
+; This agreement shall be governed by the laws of the Commonwealth of Virginia.
+; Disclaimer of Warranty
+; Because this software is licensed free of charge, there is no warranty for the program.
+; Virginia Tech makes no warranty or representation that the operation of the software in
+; this compilation will be error-free, and Virginia Tech is under no obligation to provide
+; any services, by way of maintenance, update, or otherwise.
+; THIS SOFTWARE AND THE ACCOMPANYING FILES ARE LICENSED “AS IS”
+; AND WITHOUT WARRANTIES AS TO PERFORMANCE OR
+; MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED
+; OR IMPLIED. NO WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS
+; OFFERED. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF
+; THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE,
+; YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
+; CORRECTION.
+; Limitation of Liability
+; IN NO EVENT WILL VIRGINIA TECH, OR ANY OTHER PARTY WHO MAY
+; MODIFY AND/OR REDISTRIBUTE THE PRORAM AS PERMITTED ABOVE, BE
+; LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
+; INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+; INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS
+; OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED
+; BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE
+; WITH ANY OTHER PROGRAMS), EVEN IF VIRGINIA TECH OR OTHER PARTY
+; HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+; Use of Name
+; Users will not use the name of the Virginia Polytechnic Institute and State University nor
+; any adaptation thereof in any publicity or advertising, without the prior written consent
+; from Virginia Tech in each case.
+; Export License
+; Export of this software from the United States may require a specific license from the
+; United States Government. It is the responsibility of any person or organization
+; contemplating export to obtain such a license before exporting.
 ;
 ; MODIFICATION HISTORY:
 ; Written by Lasse Clausen, Dec, 4 2009
@@ -85,7 +156,7 @@ pro overlay_isr, stats, coords=coords, date=date, time=time, jul=jul, $
 	isr_charsize=isr_charsize, isr_charthick=isr_charthick, $
 	show_fov=show_fov, fov_linecolor=fov_linecolor, fov_linethick=fov_linethick, no_fill=no_fill, $
 	fov_altitude=fov_altitude, fov_minelevation=fov_minelevation, $
-	color=color, $
+	color=color, azim=azim, $
 	background=background, isr_orientation=isr_orientation, $
 	rotate=rotate, symsize=symsize, offsets=offsets, silent=silent
 
@@ -186,7 +257,7 @@ for i=0, nstats-1 do begin
 				lats = geo_lat[ii]
 				lons = geo_lon[ii]
 			endif else if _coords eq 'magn' then begin
-				tmp = cnvcoord(geo_lat[ii], geo_lon[ii], 0.)
+				tmp = cnvcoord(geo_lat[ii], geo_lon[ii], [0.])
 				lats = tmp[0]
 				lons = ( in_mlt ? mlt(year, ut_sec, tmp[1]) : tmp[1] )
 			endif
@@ -197,7 +268,7 @@ for i=0, nstats-1 do begin
 				lats = [lats, geo_lat[ii]]
 				lons = [lons, geo_lon[ii]]
 			endif else if _coords eq 'magn' then begin
-				tmp = cnvcoord(geo_lat[ii], geo_lon[ii], 0.)
+				tmp = cnvcoord(geo_lat[ii], geo_lon[ii], [0.])
 				lats = [lats, tmp[0]]
 				lons = [lons, ( in_mlt ? mlt(year, ut_sec, tmp[1]) : tmp[1] )]
 			endif
@@ -311,6 +382,8 @@ endif
 
 load_usersym, /circle
 
+tlats = geo_lat
+tlons = geo_lon
 for i=0, nstats-1 do begin ;0 do $ ;
 	ppos = calc_stereo_coords(lats[i], lons[i], mlt=in_mlt)
 	xx = ppos[0]
@@ -334,6 +407,36 @@ for i=0, nstats-1 do begin ;0 do $ ;
 			charsize=asi_charsize, orientation=isr_orientation, noclip=0
 		xyouts, xx+nxoff, yy+nyoff, astring, charthick=2.*isr_charthick, $
 			charsize=isr_charsize, orientation=isr_orientation, noclip=0
+	endif
+	; calculate and plot beams for the given azimuths over a range of 2000km
+	if n_elements(azim) gt 0 then begin
+		for a=0,n_elements(azim)-1 do begin
+			ii = where(valid_stat_names eq strupcase(stats[i]), cc)
+			tlats[i] = geo_lat[ii]
+			tlons[i] = geo_lon[ii]
+			for r=0,100 do begin
+				temp = get_newcoords(tlats[i],tlons[i],0,azim[a],20.)
+				tlats[i] = temp[0]
+				tlons[i] = temp[1]
+				if _coords eq 'magn' then begin
+					temp = cnvcoord(temp[0], temp[1], 0.)
+					nlats = temp[0]
+					nlons = ( in_mlt ? mlt(year, ut_sec, temp[1]) : temp[1] )
+				endif
+				ppos = calc_stereo_coords(nlats, nlons, mlt=in_mlt)
+				xx = ppos[0]
+				yy = ppos[1]
+				if n_elements(rotate) ne 0 then begin
+					_x1 = cos(rotate*!dtor)*xx - sin(rotate*!dtor)*yy
+					_y1 = sin(rotate*!dtor)*xx + cos(rotate*!dtor)*yy
+					xx = _x1
+					yy = _y1
+				endif
+; 				plots, xx, yy, noclip=0, symsize=symsize, $
+; 					color=get_background(), psym=8
+				plots, xx, yy, noclip=0, psym=8, symsize=0.2, color=color, thick=1
+			endfor
+		endfor
 	endif
 endfor
 

@@ -47,6 +47,77 @@
 ; COMMON BLOCKS:
 ; RAD_DATA_BLK: The common block holding grd data.
 ;
+; EXAMPLE:
+;
+; COPYRIGHT:
+; Non-Commercial Purpose License
+; Copyright © November 14, 2006 by Virginia Polytechnic Institute and State University
+; All rights reserved.
+; Virginia Polytechnic Institute and State University (Virginia Tech) owns the DaViT
+; software and its associated documentation (“Software”). You should carefully read the
+; following terms and conditions before using this software. Your use of this Software
+; indicates your acceptance of this license agreement and all terms and conditions.
+; You are hereby licensed to use the Software for Non-Commercial Purpose only. Non-
+; Commercial Purpose means the use of the Software solely for research. Non-
+; Commercial Purpose excludes, without limitation, any use of the Software, as part of, or
+; in any way in connection with a product or service which is sold, offered for sale,
+; licensed, leased, loaned, or rented. Permission to use, copy, modify, and distribute this
+; compilation for Non-Commercial Purpose is hereby granted without fee, subject to the
+; following terms of this license.
+; Copies and Modifications
+; You must include the above copyright notice and this license on any copy or modification
+; of this compilation. Each time you redistribute this Software, the recipient automatically
+; receives a license to copy, distribute or modify the Software subject to these terms and
+; conditions. You may not impose any further restrictions on this Software or any
+; derivative works beyond those restrictions herein.
+; You agree to use your best efforts to provide Virginia Polytechnic Institute and State
+; University (Virginia Tech) with any modifications containing improvements or
+; extensions and hereby grant Virginia Tech a perpetual, royalty-free license to use and
+; distribute such modifications under the terms of this license. You agree to notify
+; Virginia Tech of any inquiries you have for commercial use of the Software and/or its
+; modifications and further agree to negotiate in good faith with Virginia Tech to license
+; your modifications for commercial purposes. Notices, modifications, and questions may
+; be directed by e-mail to Stephen Cammer at cammer@vbi.vt.edu.
+; Commercial Use
+; If you desire to use the software for profit-making or commercial purposes, you agree to
+; negotiate in good faith a license with Virginia Tech prior to such profit-making or
+; commercial use. Virginia Tech shall have no obligation to grant such license to you, and
+; may grant exclusive or non-exclusive licenses to others. You may contact Stephen
+; Cammer at email address cammer@vbi.vt.edu to discuss commercial use.
+; Governing Law
+; This agreement shall be governed by the laws of the Commonwealth of Virginia.
+; Disclaimer of Warranty
+; Because this software is licensed free of charge, there is no warranty for the program.
+; Virginia Tech makes no warranty or representation that the operation of the software in
+; this compilation will be error-free, and Virginia Tech is under no obligation to provide
+; any services, by way of maintenance, update, or otherwise.
+; THIS SOFTWARE AND THE ACCOMPANYING FILES ARE LICENSED “AS IS”
+; AND WITHOUT WARRANTIES AS TO PERFORMANCE OR
+; MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED
+; OR IMPLIED. NO WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS
+; OFFERED. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF
+; THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE,
+; YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
+; CORRECTION.
+; Limitation of Liability
+; IN NO EVENT WILL VIRGINIA TECH, OR ANY OTHER PARTY WHO MAY
+; MODIFY AND/OR REDISTRIBUTE THE PRORAM AS PERMITTED ABOVE, BE
+; LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
+; INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+; INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS
+; OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED
+; BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE
+; WITH ANY OTHER PROGRAMS), EVEN IF VIRGINIA TECH OR OTHER PARTY
+; HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+; Use of Name
+; Users will not use the name of the Virginia Polytechnic Institute and State University nor
+; any adaptation thereof in any publicity or advertising, without the prior written consent
+; from Virginia Tech in each case.
+; Export License
+; Export of this software from the United States may require a specific license from the
+; United States Government. It is the responsibility of any person or organization
+; contemplating export to obtain such a license before exporting.
+;
 ; MODIFICATION HISTORY: 
 ; Written by Lasse Clausen, Dec, 11 2009
 ;-
@@ -155,27 +226,38 @@ sfjul, odate, otime, orange, /jul_to
 omn_read, odate, time=otime, /force
 oopos = [opos[0], opos[3]+.01, opos[2], opos[3]+.1]
 omn_plot_panel, date=odate, time=otime, position=oopos, yrange=[-10,10], /ystyle, $
-	param='by_gsm', yticks=2, charsize=.4, xstyle=1, /first, linecolor=get_gray(), ytitle=' ', linethick=2
+	param='by_gsm', yticks=2, charsize=get_charsize(xmaps,ymaps), xstyle=1, /first, linecolor=get_gray(), ytitle=' ', linethick=2
 omn_plot_panel, date=odate, time=otime, position=oopos, yrange=[-10,10], ystyle=5, $
-	param='bz_gsm', charsize=.4, xstyle=5, /first, linecolor=253, ytitle='[nT]', linethick=2
+	param='bz_gsm', charsize=get_charsize(xmaps,ymaps), xstyle=5, /first, linecolor=253, ytitle='[nT]', linethick=2
 xyouts, (sjul+fjul)/2.d - 30.d/1440.d + 2.d/1440.d, !y.crange[0]+.13*(!y.crange[1]-!y.crange[0]), $
-	'By', color=get_gray(), charsize=.7, charthick=2
+	'By', color=get_gray(), charsize=get_charsize(xmaps,ymaps), charthick=2
 xyouts, (sjul+fjul)/2.d - 30.d/1440.d + 2.d/1440.d, !y.crange[1]-.18*(!y.crange[1]-!y.crange[0]), $
-	'Bz', color=253, charsize=.7, charthick=2
+	'Bz', color=253, charsize=get_charsize(xmaps,ymaps), charthick=2
 oplot, !x.crange, replicate(.5*!y.crange[0], 2), linestyle=1, color=get_gray()
 oplot, !x.crange, replicate(.5*!y.crange[1], 2), linestyle=1, color=get_gray()
 oplot, replicate((sjul+fjul)/2.d,2), !y.crange, linestyle=2, color=252
 
 oopos = [opos[0], opos[3]+.11, opos[2], opos[3]+.2]
 rad_grd_plot_npoints_panel, date=odate, time=otime, position=oopos, yrange=[1e1,1e3], ystyle=1, $
-	charsize=.4, xstyle=9, /ylog, linethick=2, hemisphere=hemisphere, xtickname=replicate(' ', 30), xtickformat=''
+	xstyle=9, /ylog, linethick=2, hemisphere=hemisphere, xtickname=replicate(' ', 30), xtickformat='', charsize=get_charsize(xmaps,ymaps)
 xyouts, (sjul+fjul)/2.d - 30.d/1440.d + 2.d/1440.d, 10^(!y.crange[1]-.18*(!y.crange[1]-!y.crange[0])), $
-	'Npts', charsize=.7, charthick=2
+	'Npts', charsize=get_charsize(xmaps,ymaps), charthick=2
 axis, /xaxis, /xstyle, xrange=orange, xticks=get_xticks(orange[0], orange[1]), $
-	charsize=.5, xtickformat='label_date'
+	xtickformat='label_date', charsize=get_charsize(xmaps,ymaps)
 
 ;opos = [_position[0], _position[3]+.06, _position[2], _position[3]+.15]
 	;oplot, replicate(ajul,2), !y.crange, linestyle=2, color=252
+
+if ~keyword_set(new_page) then begin
+	cb_pos = define_cb_position(mpos, height=50, gap=.2*(mpos[2]-mpos[0]))
+	plot_colorbar, /square, scale=scale, parameter='velocity', position=cb_pos, $
+		/no_rotate, charsize=get_charsize(xmaps,ymaps)
+	if keyword_set(orig_fan) then begin
+		cb_pos = define_cb_position(mpos, height=50, gap=.13*(mpos[2]-mpos[0]))
+		plot_colorbar, /square, scale=.5*[-scale[1],scale[1]], parameter='velocity', $
+			/left, position=cb_pos, legend=' ', charsize=get_charsize(xmaps,ymaps)
+	endif
+endif
 
 ; loop through panels
 for b=0, npanels-1 do begin
@@ -212,6 +294,23 @@ for b=0, npanels-1 do begin
 	else $
 		_position = position
 
+	rad_grd_plot_title, position=_position, index=_index, $
+		int_hemisphere=int_hemi, charsize=get_charsize(xmaps,ymaps)
+
+	;rad_map_plot_vector_scale, xmaps, ymaps, xmap, ymap, gap=.01*get_charsize(xmaps,ymaps), $
+	;	scale=scale, xrange=xrange, factor=factor*480., panel_position=_position, charsize=get_charsize(xmaps,ymaps)
+
+	if keyword_set(new_page) then begin
+		cb_pos = define_cb_position(_position, height=50, gap=.2*(_position[2]-_position[0]))
+		plot_colorbar, /square, scale=scale, parameter='velocity', position=cb_pos, $
+			/no_rotate, charsize=get_charsize(xmaps,ymaps)
+		if keyword_set(orig_fan) then begin
+			cb_pos = define_cb_position(_position, height=50, gap=.13*(_position[2]-_position[0]))
+			plot_colorbar, /square, scale=.5*[-scale[1],scale[1]], parameter='velocity', $
+				/left, position=cb_pos, legend=' ', charsize=get_charsize(xmaps,ymaps)
+		endif
+	endif
+
 	rad_grd_plot_panel, xmaps, ymaps, xmap, ymap, $
 		date=date, time=time, long=long, $
 		north=north, south=south, hemisphere=hemisphere, $
@@ -220,34 +319,6 @@ for b=0, npanels-1 do begin
 		xrange=xrange, yrange=yrange, factor=factor, $
 		position=_position
 
-	rad_grd_plot_title, position=_position, index=_index, $
-		charsize=.6, int_hemisphere=int_hemi
-
-	rad_map_plot_vector_scale, xmaps, ymaps, xmap, ymap, gap=.01*get_charsize(xmaps,ymaps), $
-		scale=scale, xrange=xrange, factor=factor, tposition=_position
-
-	if keyword_set(new_page) then begin
-		cb_pos = define_cb_position(_position, height=50, gap=.2*(_position[2]-_position[0]))
-		plot_colorbar, /square, scale=scale, parameter='velocity', position=cb_pos, $
-			/no_rotate
-		if keyword_set(orig_fan) then begin
-			cb_pos = define_cb_position(_position, height=50, gap=.13*(_position[2]-_position[0]))
-			plot_colorbar, /square, scale=.5*[-scale[1],scale[1]], parameter='velocity', $
-				/left, position=cb_pos, legend=' '
-		endif
-	endif
-
 endfor
-
-if ~keyword_set(new_page) then begin
-	cb_pos = define_cb_position(mpos, height=50, gap=.2*(mpos[2]-mpos[0]))
-	plot_colorbar, /square, scale=scale, parameter='velocity', position=cb_pos, $
-		/no_rotate
-	if keyword_set(orig_fan) then begin
-		cb_pos = define_cb_position(mpos, height=50, gap=.13*(mpos[2]-mpos[0]))
-		plot_colorbar, /square, scale=.5*[-scale[1],scale[1]], parameter='velocity', $
-			/left, position=cb_pos, legend=' '
-	endif
-endif
 
 end

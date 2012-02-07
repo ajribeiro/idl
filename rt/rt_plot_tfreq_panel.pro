@@ -38,7 +38,8 @@ endif
 if ~keyword_set(time) then $
 	time = [0000,2400]
 
-sfjul, date, time, sjul, fjul
+sjul = rt_info.sjul
+fjul = rt_info.fjul
 xrange = [sjul, fjul]
 
 if ~keyword_set(xtitle) then $
@@ -136,11 +137,6 @@ plot, [0,0], /nodata, position=position, $
 	xtickname=_xtickname, ytickname=_ytickname, $
 	xrange=xrange, yrange=yrange, $
 	color=get_foreground()
-
-;if keyword_set(info) then $
-;	xyouts, position[0]-.05*(position[2]-position[0]), $
-;		(position[1]+position[3])/2., ytitle, align=1, /norm, $
-;		charsize=.6*charsize
 
 ; get data
 xtag = 'juls'

@@ -41,6 +41,75 @@
 ;
 ; EXAMPLE:
 ;
+; COPYRIGHT:
+; Non-Commercial Purpose License
+; Copyright © November 14, 2006 by Virginia Polytechnic Institute and State University
+; All rights reserved.
+; Virginia Polytechnic Institute and State University (Virginia Tech) owns the DaViT
+; software and its associated documentation (“Software”). You should carefully read the
+; following terms and conditions before using this software. Your use of this Software
+; indicates your acceptance of this license agreement and all terms and conditions.
+; You are hereby licensed to use the Software for Non-Commercial Purpose only. Non-
+; Commercial Purpose means the use of the Software solely for research. Non-
+; Commercial Purpose excludes, without limitation, any use of the Software, as part of, or
+; in any way in connection with a product or service which is sold, offered for sale,
+; licensed, leased, loaned, or rented. Permission to use, copy, modify, and distribute this
+; compilation for Non-Commercial Purpose is hereby granted without fee, subject to the
+; following terms of this license.
+; Copies and Modifications
+; You must include the above copyright notice and this license on any copy or modification
+; of this compilation. Each time you redistribute this Software, the recipient automatically
+; receives a license to copy, distribute or modify the Software subject to these terms and
+; conditions. You may not impose any further restrictions on this Software or any
+; derivative works beyond those restrictions herein.
+; You agree to use your best efforts to provide Virginia Polytechnic Institute and State
+; University (Virginia Tech) with any modifications containing improvements or
+; extensions and hereby grant Virginia Tech a perpetual, royalty-free license to use and
+; distribute such modifications under the terms of this license. You agree to notify
+; Virginia Tech of any inquiries you have for commercial use of the Software and/or its
+; modifications and further agree to negotiate in good faith with Virginia Tech to license
+; your modifications for commercial purposes. Notices, modifications, and questions may
+; be directed by e-mail to Stephen Cammer at cammer@vbi.vt.edu.
+; Commercial Use
+; If you desire to use the software for profit-making or commercial purposes, you agree to
+; negotiate in good faith a license with Virginia Tech prior to such profit-making or
+; commercial use. Virginia Tech shall have no obligation to grant such license to you, and
+; may grant exclusive or non-exclusive licenses to others. You may contact Stephen
+; Cammer at email address cammer@vbi.vt.edu to discuss commercial use.
+; Governing Law
+; This agreement shall be governed by the laws of the Commonwealth of Virginia.
+; Disclaimer of Warranty
+; Because this software is licensed free of charge, there is no warranty for the program.
+; Virginia Tech makes no warranty or representation that the operation of the software in
+; this compilation will be error-free, and Virginia Tech is under no obligation to provide
+; any services, by way of maintenance, update, or otherwise.
+; THIS SOFTWARE AND THE ACCOMPANYING FILES ARE LICENSED “AS IS”
+; AND WITHOUT WARRANTIES AS TO PERFORMANCE OR
+; MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED
+; OR IMPLIED. NO WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS
+; OFFERED. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF
+; THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE,
+; YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
+; CORRECTION.
+; Limitation of Liability
+; IN NO EVENT WILL VIRGINIA TECH, OR ANY OTHER PARTY WHO MAY
+; MODIFY AND/OR REDISTRIBUTE THE PRORAM AS PERMITTED ABOVE, BE
+; LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
+; INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+; INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS
+; OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED
+; BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE
+; WITH ANY OTHER PROGRAMS), EVEN IF VIRGINIA TECH OR OTHER PARTY
+; HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+; Use of Name
+; Users will not use the name of the Virginia Polytechnic Institute and State University nor
+; any adaptation thereof in any publicity or advertising, without the prior written consent
+; from Virginia Tech in each case.
+; Export License
+; Export of this software from the United States may require a specific license from the
+; United States Government. It is the responsibility of any person or organization
+; contemplating export to obtain such a license before exporting.
+;
 ; MODIFICATION HISTORY:
 ; Based on Steve Milan's READ_FILES.
 ; Written by Lasse Clausen, Nov, 24 2009
@@ -288,14 +357,14 @@ good = where(tmp_juls gt -9999.d, ng)
 if ng eq 0 then $
 	return
 tjuls = tmp_juls[good]
-tau  = tmp_au [good]
-tal  = tmp_al [good]
-tae  = tmp_ae [good]
-tao  = tmp_ao [good]
-tsh  = tmp_sh [good]
-tsd  = tmp_sd [good]
-tah  = tmp_ah [good]
-tad  = tmp_ad [good]
+tau  = float(tmp_au [good])
+tal  = float(tmp_al [good])
+tae  = float(tmp_ae [good])
+tao  = float(tmp_ao [good])
+tsh  = float(tmp_sh [good])
+tsd  = float(tmp_sd [good])
+tah  = float(tmp_ah [good])
+tad  = float(tmp_ad [good])
 
 jinds = where(tjuls ge sjul and tjuls le fjul, cc)
 if cc eq 0 then begin
@@ -313,41 +382,41 @@ sd  = tsd[jinds]
 ah  = tah[jinds]
 ad  = tad[jinds]
 
-ninds = where(au eq 99999L, ncc)
+ninds = where(au gt 99990., ncc)
 if ncc ge 1L then $
 	au[ninds] = !values.f_nan
-ninds = where(al eq 99999L, ncc)
+ninds = where(al gt 99990., ncc)
 if ncc ge 1L then $
 	al[ninds] = !values.f_nan
-ninds = where(ae eq 99999L, ncc)
+ninds = where(ae gt 99990., ncc)
 if ncc ge 1L then $
 	ae[ninds] = !values.f_nan
-ninds = where(ao eq 99999L, ncc)
+ninds = where(ao gt 99990., ncc)
 if ncc ge 1L then $
 	ao[ninds] = !values.f_nan
-ninds = where(sh eq 99999L, ncc)
+ninds = where(sh gt 99990., ncc)
 if ncc ge 1L then $
 	sh[ninds] = !values.f_nan
-ninds = where(sd eq 99999L, ncc)
+ninds = where(sd gt 99990., ncc)
 if ncc ge 1L then $
 	sd[ninds] = !values.f_nan
-ninds = where(ah eq 99999L, ncc)
+ninds = where(ah gt 99990., ncc)
 if ncc ge 1L then $
 	ah[ninds] = !values.f_nan
-ninds = where(ad eq 99999L, ncc)
+ninds = where(ad gt 99990., ncc)
 if ncc ge 1L then $
 	ad[ninds] = !values.f_nan
 
 taur_data = { $
 	juls: dblarr(cc), $
-	au_index: lonarr(cc), $
-	al_index: lonarr(cc), $
-	ae_index: lonarr(cc), $
-	ao_index: lonarr(cc), $
-	sym_h: lonarr(cc), $
-	sym_d: lonarr(cc), $
-	asy_h: lonarr(cc), $
-	asy_d: lonarr(cc) $
+	au_index: fltarr(cc), $
+	al_index: fltarr(cc), $
+	ae_index: fltarr(cc), $
+	ao_index: fltarr(cc), $
+	sym_h: fltarr(cc), $
+	sym_d: fltarr(cc), $
+	asy_h: fltarr(cc), $
+	asy_d: fltarr(cc) $
 }
 
 taur_data.juls = juls

@@ -34,6 +34,19 @@
 ; LONG: Set this keyword to indicate that the TIME value is in HHIISS
 ; format rather than HHII format.
 ;
+; DATA: Set this keyword to plot the number of actual LoS velocity vectors.
+; This is the default. See also the MODEL and RATIO keyword.
+;
+; MODEL: Set this keyword to plot the number of model vectors added to 
+; constrain the fit. See also DATA and RATIO keyword.
+;
+; RATIO: Set this keyword to plot the ratio of the number of
+; real LoS vectors vc to the number of model vectors m. The ratio
+; is calculated like r = vc / (vc + m)
+; A ratio of 0 indicates all vectors are form the model, 
+; if the ratio is 1, all vectors are original LoS vectors.
+; See also DATA and MODEL keyword.
+;
 ; YRANGE: Set this keyword to change the range of the y axis.
 ;
 ; SILENT: Set this keyword to surpress all messages/warnings.
@@ -90,12 +103,82 @@
 ;
 ; EXAMPLE: 
 ; 
+; COPYRIGHT:
+; Non-Commercial Purpose License
+; Copyright © November 14, 2006 by Virginia Polytechnic Institute and State University
+; All rights reserved.
+; Virginia Polytechnic Institute and State University (Virginia Tech) owns the DaViT
+; software and its associated documentation (“Software”). You should carefully read the
+; following terms and conditions before using this software. Your use of this Software
+; indicates your acceptance of this license agreement and all terms and conditions.
+; You are hereby licensed to use the Software for Non-Commercial Purpose only. Non-
+; Commercial Purpose means the use of the Software solely for research. Non-
+; Commercial Purpose excludes, without limitation, any use of the Software, as part of, or
+; in any way in connection with a product or service which is sold, offered for sale,
+; licensed, leased, loaned, or rented. Permission to use, copy, modify, and distribute this
+; compilation for Non-Commercial Purpose is hereby granted without fee, subject to the
+; following terms of this license.
+; Copies and Modifications
+; You must include the above copyright notice and this license on any copy or modification
+; of this compilation. Each time you redistribute this Software, the recipient automatically
+; receives a license to copy, distribute or modify the Software subject to these terms and
+; conditions. You may not impose any further restrictions on this Software or any
+; derivative works beyond those restrictions herein.
+; You agree to use your best efforts to provide Virginia Polytechnic Institute and State
+; University (Virginia Tech) with any modifications containing improvements or
+; extensions and hereby grant Virginia Tech a perpetual, royalty-free license to use and
+; distribute such modifications under the terms of this license. You agree to notify
+; Virginia Tech of any inquiries you have for commercial use of the Software and/or its
+; modifications and further agree to negotiate in good faith with Virginia Tech to license
+; your modifications for commercial purposes. Notices, modifications, and questions may
+; be directed by e-mail to Stephen Cammer at cammer@vbi.vt.edu.
+; Commercial Use
+; If you desire to use the software for profit-making or commercial purposes, you agree to
+; negotiate in good faith a license with Virginia Tech prior to such profit-making or
+; commercial use. Virginia Tech shall have no obligation to grant such license to you, and
+; may grant exclusive or non-exclusive licenses to others. You may contact Stephen
+; Cammer at email address cammer@vbi.vt.edu to discuss commercial use.
+; Governing Law
+; This agreement shall be governed by the laws of the Commonwealth of Virginia.
+; Disclaimer of Warranty
+; Because this software is licensed free of charge, there is no warranty for the program.
+; Virginia Tech makes no warranty or representation that the operation of the software in
+; this compilation will be error-free, and Virginia Tech is under no obligation to provide
+; any services, by way of maintenance, update, or otherwise.
+; THIS SOFTWARE AND THE ACCOMPANYING FILES ARE LICENSED “AS IS”
+; AND WITHOUT WARRANTIES AS TO PERFORMANCE OR
+; MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED
+; OR IMPLIED. NO WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS
+; OFFERED. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF
+; THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE,
+; YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
+; CORRECTION.
+; Limitation of Liability
+; IN NO EVENT WILL VIRGINIA TECH, OR ANY OTHER PARTY WHO MAY
+; MODIFY AND/OR REDISTRIBUTE THE PRORAM AS PERMITTED ABOVE, BE
+; LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
+; INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+; INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS
+; OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED
+; BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE
+; WITH ANY OTHER PROGRAMS), EVEN IF VIRGINIA TECH OR OTHER PARTY
+; HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+; Use of Name
+; Users will not use the name of the Virginia Polytechnic Institute and State University nor
+; any adaptation thereof in any publicity or advertising, without the prior written consent
+; from Virginia Tech in each case.
+; Export License
+; Export of this software from the United States may require a specific license from the
+; United States Government. It is the responsibility of any person or organization
+; contemplating export to obtain such a license before exporting.
+;
 ; MODIFICATION HISTORY: 
 ; Written by: Lasse Clausen, 2009.
 ;-
 pro rad_map_plot_npoints_panel, xmaps, ymaps, xmap, ymap, $
 	date=date, time=time, long=long, $
 	north=north, south=south, hemisphere=hemisphere, $
+	data=data, model=model, ratio=ratio, $
 	yrange=yrange, ylog=ylog, $
 	silent=silent, bar=bar, $
 	charthick=charthick, charsize=charsize, psym=psym, $ 
@@ -149,6 +232,9 @@ if ~keyword_set(time) then $
 sfjul, date, time, sjul, fjul, long=long
 xrange = [sjul, fjul]
 
+if ~keyword_set(data) and ~keyword_set(model) and ~keyword_set(ratio) then $
+	data = 1
+
 if ~keyword_set(xtitle) then $
 	_xtitle = 'Time UT' $
 else $
@@ -164,9 +250,12 @@ if ~keyword_set(xtickname) then $
 else $
 	_xtickname = xtickname
 
-if ~keyword_set(ytitle) then $
-	_ytitle = 'N pts' $
-else $
+if ~keyword_set(ytitle) then begin
+	if keyword_set(ratio) then $
+		_ytitle = textoidl('N_{vc}/(N_{vc} + N_{mod})') $
+	else $
+		_ytitle = 'N pts'
+endif else $
 	_ytitle = ytitle
 
 if ~keyword_set(ytickformat) then $
@@ -215,8 +304,12 @@ if ~keyword_set(xstyle) then $
 if ~keyword_set(ystyle) then $
 	ystyle = 1
 
-if ~keyword_set(yrange) then $
-	yrange = get_default_range('npoints')
+if ~keyword_set(yrange) then begin
+	if keyword_set(ratio) then $
+		yrange = [0,1] $
+	else $
+		yrange = get_default_range('npoints')
+endif
 
 if ~keyword_set(charsize) then $
 	charsize = get_charsize(xmaps, ymaps)
@@ -233,6 +326,9 @@ if ~keyword_set(xticks) then $
 if keyword_set(xminor) then $
 	_xminor = xminor
 
+if ~keyword_set(psym) then $
+	psym = 10
+
 ; set up coordinate system for plot
 plot, [0,0], /nodata, position=position, $
 	charthick=charthick, charsize=(keyword_set(info) ? .6 : 1.)*charsize, $ 
@@ -245,20 +341,50 @@ plot, [0,0], /nodata, position=position, $
 
 ; get data
 xtag = 'mjuls'
-ytag = 'vcnum'
 if ~tag_exists((*rad_map_data[int_hemi]), xtag) then begin
 	prinfo, 'Parameter '+xtag+' does not exist in RAD_MAP_DATA.'
 	return
 endif
-if ~tag_exists((*rad_map_data[int_hemi]), ytag) then begin
-	prinfo, 'Parameter '+ytag+' does not exist in RAD_MAP_DATA.'
-	return
-endif
 dd = execute('xdata = (*rad_map_data[int_hemi]).'+xtag)
-dd = execute('ydata = (*rad_map_data[int_hemi]).'+ytag)
+
+if keyword_set(model) then begin
+	ytag = 'modnum'
+	if ~tag_exists((*rad_map_data[int_hemi]), ytag) then begin
+		prinfo, 'Parameter '+ytag+' does not exist in RAD_MAP_DATA.'
+		return
+	endif
+	dd = execute('ydata = (*rad_map_data[int_hemi]).'+ytag)
+endif else if keyword_set(data) then begin
+	ytag = 'vcnum'
+	if ~tag_exists((*rad_map_data[int_hemi]), ytag) then begin
+		prinfo, 'Parameter '+ytag+' does not exist in RAD_MAP_DATA.'
+		return
+	endif
+	dd = execute('ydata = (*rad_map_data[int_hemi]).'+ytag)
+endif else if keyword_set(ratio) then begin
+	ytag = 'vcnum'
+	if ~tag_exists((*rad_map_data[int_hemi]), ytag) then begin
+		prinfo, 'Parameter '+ytag+' does not exist in RAD_MAP_DATA.'
+		return
+	endif
+	dd = execute('ydatav = (*rad_map_data[int_hemi]).'+ytag)
+	ytag = 'modnum'
+	if ~tag_exists((*rad_map_data[int_hemi]), ytag) then begin
+		prinfo, 'Parameter '+ytag+' does not exist in RAD_MAP_DATA.'
+		return
+	endif
+	dd = execute('ydatam = (*rad_map_data[int_hemi]).'+ytag)
+	ydata = float(ydatav)/float(ydatav+ydatam)
+endif else begin
+	prinfo, 'Must set DATA, MODEL or RATIO keyword.'
+	return
+endelse
 
 ; overplot data
 oplot, xdata, ydata, $
 	thick=linethick, color=linecolor, linestyle=linestyle, psym=psym
+
+if keyword_set(ratio) then $
+	oplot, !x.crange, [0.5, 0.5], linestyle=2, color=get_gray()
 
 end

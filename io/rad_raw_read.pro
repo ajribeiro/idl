@@ -32,7 +32,7 @@
 ;
 ; FILENAME: Set this to a string containing the name of the rawacf/dat file to read.
 ;
-; FILEDAT: Set this keyword to indicate that the file in FILENAME is in the old
+; FILEOLDDAT: Set this keyword to indicate that the file in FILENAME is in the old
 ; dat file format.
 ;
 ; FILERAWACF: Set this keyword to indicate that the file in FILENAME is in rawacf
@@ -60,6 +60,75 @@
 ;
 ; EXAMPLE:
 ;
+; COPYRIGHT:
+; Non-Commercial Purpose License
+; Copyright © November 14, 2006 by Virginia Polytechnic Institute and State University
+; All rights reserved.
+; Virginia Polytechnic Institute and State University (Virginia Tech) owns the DaViT
+; software and its associated documentation (“Software”). You should carefully read the
+; following terms and conditions before using this software. Your use of this Software
+; indicates your acceptance of this license agreement and all terms and conditions.
+; You are hereby licensed to use the Software for Non-Commercial Purpose only. Non-
+; Commercial Purpose means the use of the Software solely for research. Non-
+; Commercial Purpose excludes, without limitation, any use of the Software, as part of, or
+; in any way in connection with a product or service which is sold, offered for sale,
+; licensed, leased, loaned, or rented. Permission to use, copy, modify, and distribute this
+; compilation for Non-Commercial Purpose is hereby granted without fee, subject to the
+; following terms of this license.
+; Copies and Modifications
+; You must include the above copyright notice and this license on any copy or modification
+; of this compilation. Each time you redistribute this Software, the recipient automatically
+; receives a license to copy, distribute or modify the Software subject to these terms and
+; conditions. You may not impose any further restrictions on this Software or any
+; derivative works beyond those restrictions herein.
+; You agree to use your best efforts to provide Virginia Polytechnic Institute and State
+; University (Virginia Tech) with any modifications containing improvements or
+; extensions and hereby grant Virginia Tech a perpetual, royalty-free license to use and
+; distribute such modifications under the terms of this license. You agree to notify
+; Virginia Tech of any inquiries you have for commercial use of the Software and/or its
+; modifications and further agree to negotiate in good faith with Virginia Tech to license
+; your modifications for commercial purposes. Notices, modifications, and questions may
+; be directed by e-mail to Stephen Cammer at cammer@vbi.vt.edu.
+; Commercial Use
+; If you desire to use the software for profit-making or commercial purposes, you agree to
+; negotiate in good faith a license with Virginia Tech prior to such profit-making or
+; commercial use. Virginia Tech shall have no obligation to grant such license to you, and
+; may grant exclusive or non-exclusive licenses to others. You may contact Stephen
+; Cammer at email address cammer@vbi.vt.edu to discuss commercial use.
+; Governing Law
+; This agreement shall be governed by the laws of the Commonwealth of Virginia.
+; Disclaimer of Warranty
+; Because this software is licensed free of charge, there is no warranty for the program.
+; Virginia Tech makes no warranty or representation that the operation of the software in
+; this compilation will be error-free, and Virginia Tech is under no obligation to provide
+; any services, by way of maintenance, update, or otherwise.
+; THIS SOFTWARE AND THE ACCOMPANYING FILES ARE LICENSED “AS IS”
+; AND WITHOUT WARRANTIES AS TO PERFORMANCE OR
+; MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED
+; OR IMPLIED. NO WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS
+; OFFERED. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF
+; THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE,
+; YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
+; CORRECTION.
+; Limitation of Liability
+; IN NO EVENT WILL VIRGINIA TECH, OR ANY OTHER PARTY WHO MAY
+; MODIFY AND/OR REDISTRIBUTE THE PRORAM AS PERMITTED ABOVE, BE
+; LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
+; INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+; INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS
+; OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED
+; BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE
+; WITH ANY OTHER PROGRAMS), EVEN IF VIRGINIA TECH OR OTHER PARTY
+; HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+; Use of Name
+; Users will not use the name of the Virginia Polytechnic Institute and State University nor
+; any adaptation thereof in any publicity or advertising, without the prior written consent
+; from Virginia Tech in each case.
+; Export License
+; Export of this software from the United States may require a specific license from the
+; United States Government. It is the responsibility of any person or organization
+; contemplating export to obtain such a license before exporting.
+;
 ; MODIFICATION HISTORY:
 ; Based on Steve Milan's READ_FILES.
 ; Written by Lasse Clausen, Nov, 24 2009
@@ -69,7 +138,7 @@ pro rad_raw_read, date, radar, time=time, $
 	long=long, silent=silent, $
 	filename=filename, fileolddat=fileolddat, fileradar=fileradar, $
 	filedate=filedate, filerawacf=filerawacf, $
-	force=force
+	force=force, stop_after_read=stop_after_read
 
 common rad_data_blk
 common radarinfo
@@ -204,27 +273,36 @@ tmp_beam      = make_array(MAX_RECS, /int)
 tmp_scan_id   = make_array(MAX_RECS, /int)
 tmp_scan_mark = make_array(MAX_RECS, /int)
 tmp_channel   = make_array(MAX_RECS, /byte)
+; 0 for no interferometer data
+; 1 for interferometer data
+tmp_xcf       = make_array(MAX_RECS, /byte)
 tmp_lagfr     = make_array(MAX_RECS, /int)
-tmp_smsep     = make_array(MAX_RECS, /float)
+tmp_smsep     = make_array(MAX_RECS, /int)
 tmp_tfreq     = make_array(MAX_RECS, /float)
 tmp_noise     = make_array(MAX_RECS, /float)
-tmp_atten     = make_array(MAX_RECS, /float)
+tmp_atten     = make_array(MAX_RECS, /int)
 tmp_mplgs     = make_array(MAX_RECS, /byte)
-tmp_acf_r     = make_array(MAX_RECS, maxgates, MAX_LAGS, /float)
-tmp_acf_i     = make_array(MAX_RECS, maxgates, MAX_LAGS, /float)
-tmp_xcf_r     = make_array(MAX_RECS, maxgates, MAX_LAGS, /float)
-tmp_xcf_i     = make_array(MAX_RECS, maxgates, MAX_LAGS, /float)
+; 0 for HF mode
+; 1 for IF mode
+; 255 for not set
+tmp_ifmode     = make_array(MAX_RECS, /byte)
+; wait until we know the actual number of gates from the first 
+; fit record.
+;tmp_acf_r     = make_array(MAX_RECS, maxgates, MAX_LAGS, /float)
+;tmp_acf_i     = make_array(MAX_RECS, maxgates, MAX_LAGS, /float)
+;tmp_xcf_r     = make_array(MAX_RECS, maxgates, MAX_LAGS, /float)
+;tmp_xcf_i     = make_array(MAX_RECS, maxgates, MAX_LAGS, /float)
 nrecs = 0L
 
 ; make structures for reading fit files
 ; this is done in order to speed things up a little
-RadarMakeRadarPrm, prm
-RawMakeRawData, raw
-lib = getenv('LIB_RAWIDL')
-if strcmp(lib, '') then begin
-	prinfo, 'Cannot find LIB_RAWIDL'
-	return
-endif
+;RadarMakeRadarPrm, prm
+;RawMakeRawData, raw
+;lib = getenv('LIB_RAWIDL')
+;if strcmp(lib, '') then begin
+;	prinfo, 'Cannot find LIB_RAWIDL'
+;	return
+;endif
 
 ; read files
 for i=0, fc-1 do begin
@@ -256,12 +334,48 @@ for i=0, fc-1 do begin
 		if olddat then begin
 			ret = oldrawread(ilun, prm, raw)
 		endif else begin
-			ret = rad_raw_read_record(ilun, lib, prm, raw)
+;			ret = rad_raw_read_record(ilun, lib, prm, raw)
+			ret = rawread(ilun, prm, raw)
 		endelse
 
 		; exit if all read
 		if ret eq -1 then $
 			break
+
+		if keyword_set(stop_after_read) then $
+			stop
+
+		if nrecs eq 0 then begin
+			maxgates = prm.nrang
+			tmp_pwr0      = make_array(MAX_RECS, maxgates, /float)
+			tmp_lagtime   = make_array(MAX_RECS, MAX_LAGS, /float)
+			tmp_acf_r     = make_array(MAX_RECS, maxgates, MAX_LAGS, /float)
+			tmp_acf_i     = make_array(MAX_RECS, maxgates, MAX_LAGS, /float)
+			tmp_xcf_r     = make_array(MAX_RECS, maxgates, MAX_LAGS, /float)
+			tmp_xcf_i     = make_array(MAX_RECS, maxgates, MAX_LAGS, /float)
+		endif
+		if prm.nrang ne maxgates then begin
+			prinfo, 'Number of range gates changed.'
+			if prm.nrang gt maxgates then begin
+				prinfo, '  Adjusting new ranges gates...'
+				ttmp_pwr0 = make_array(MAX_RECS, prm.nrang, /float)
+				ttmp_pwr0[0:nrecs-1L,0:maxgates-1] = tmp_pwr0[0:nrecs-1L,*]
+				tmp_pwr0 = ttmp_pwr0
+				ttmp_acf_r = make_array(MAX_RECS, prm.nrang, MAX_LAGS, /float)
+				ttmp_acf_r[0:nrecs-1L,0:maxgates-1,*] = tmp_acf_r[0:nrecs-1L,*,*]
+				tmp_acf_r = ttmp_acf_r
+				ttmp_acf_i = make_array(MAX_RECS, prm.nrang, MAX_LAGS, /float)
+				ttmp_acf_i[0:nrecs-1L,0:maxgates-1,*] = tmp_acf_i[0:nrecs-1L,*,*]
+				tmp_acf_i = ttmp_acf_i
+				ttmp_xcf_r = make_array(MAX_RECS, prm.nrang, MAX_LAGS, /float)
+				ttmp_xcf_r[0:nrecs-1L,0:maxgates-1,*] = tmp_xcf_r[0:nrecs-1L,*,*]
+				tmp_xcf_r = ttmp_xcf_r
+				ttmp_xcf_i = make_array(MAX_RECS, prm.nrang, MAX_LAGS, /float)
+				ttmp_xcf_i[0:nrecs-1L,0:maxgates-1,*] = tmp_xcf_i[0:nrecs-1L,*,*]
+				tmp_xcf_i = ttmp_xcf_i
+				maxgates = prm.nrang
+			endif
+		endif
 
 		; This logic sets the parameters to the values as read in 
 		; from the file or 10000 if the qflg=0 (or x_qflg=0
@@ -274,6 +388,7 @@ for i=0, fc-1 do begin
 		tmp_scan_id[nrecs] = prm.cp
 		tmp_scan_mark[nrecs] = prm.scan
 		tmp_channel[nrecs] = prm.channel
+		tmp_xcf[nrecs] = prm.xcf
 		tmp_lagfr[nrecs] = prm.lagfr
 		tmp_smsep[nrecs] = prm.smsep
 		tmp_tfreq[nrecs] = prm.tfreq
@@ -286,10 +401,15 @@ for i=0, fc-1 do begin
 			MAX_RECS = -1
 			break
 		endif
+		tmp_pwr0[nrecs,0:maxgates-1] = raw.pwr0[0:maxgates-1]
+		tmp_lagtime[nrecs,0:prm.mplgs-1] = (prm.lag[0:prm.mplgs-1,1]-prm.lag[0:prm.mplgs-1,0])*prm.smsep
 		tmp_acf_r[nrecs,0:maxgates-1,0:prm.mplgs-1] = raw.acfd[0:maxgates-1,0:prm.mplgs-1,0]
 		tmp_acf_i[nrecs,0:maxgates-1,0:prm.mplgs-1] = raw.acfd[0:maxgates-1,0:prm.mplgs-1,1]
 		tmp_xcf_r[nrecs,0:maxgates-1,0:prm.mplgs-1] = raw.xcfd[0:maxgates-1,0:prm.mplgs-1,0]
 		tmp_xcf_i[nrecs,0:maxgates-1,0:prm.mplgs-1] = raw.xcfd[0:maxgates-1,0:prm.mplgs-1,1]
+
+		tmp_ifmode[nrecs] = ( prm.ifmode eq -1 ? 255b : byte(prm.ifmode) )
+
 		nrecs += 1L
 		; if temporary arrays are too small, warn and break
 		if nrecs ge MAX_RECS then begin
@@ -301,8 +421,7 @@ for i=0, fc-1 do begin
 		s = oldrawclose(ilun) $
 	else $
 		free_lun, ilun
-	if ~file_test(getenv('RAD_WWW_DATA_DIR'), /dir) and ~no_delete then $
-		file_delete, o_file
+	file_delete, o_file
 	if nrecs ge MAX_RECS then $
 		break
 endfor
@@ -318,19 +437,23 @@ trad_raw_data = { $
 	ysec: lonarr(nrecs), $
 	beam: intarr(nrecs), $
 	scan_id: intarr(nrecs), $
-	scan_mark: fltarr(nrecs), $
+	scan_mark: intarr(nrecs), $
 	beam_scan: lonarr(nrecs), $
-	channel: fltarr(nrecs), $
+	channel: bytarr(nrecs), $
+	xcf: bytarr(nrecs), $
 	lagfr: intarr(nrecs), $
-	smsep: fltarr(nrecs), $
+	smsep: intarr(nrecs), $
 	tfreq: fltarr(nrecs), $
 	noise: fltarr(nrecs), $
-	atten: fltarr(nrecs), $
+	atten: intarr(nrecs), $
 	mplgs: bytarr(nrecs), $
+	pwr0:  fltarr(nrecs, maxgates), $
+	lagtime: fltarr(nrecs, MAX_LAGS), $
 	acf_r: fltarr(nrecs, maxgates, MAX_LAGS), $
 	acf_i: fltarr(nrecs, maxgates, MAX_LAGS), $
 	xcf_r: fltarr(nrecs, maxgates, MAX_LAGS), $
-	xcf_i: fltarr(nrecs, maxgates, MAX_LAGS) $
+	xcf_i: fltarr(nrecs, maxgates, MAX_LAGS), $
+	ifmode: bytarr(nrecs) $
 }
 ; distribute data in structure
 trad_raw_data.juls = tmp_juls[0:nrecs-1L]
@@ -339,16 +462,20 @@ trad_raw_data.beam = tmp_beam[0:nrecs-1L]
 trad_raw_data.scan_id = tmp_scan_id[0:nrecs-1L]
 trad_raw_data.scan_mark = tmp_scan_mark[0:nrecs-1L]
 trad_raw_data.channel = tmp_channel[0:nrecs-1L]
+trad_raw_data.xcf = tmp_xcf[0:nrecs-1L]
 trad_raw_data.lagfr = tmp_lagfr[0:nrecs-1L]
 trad_raw_data.smsep = tmp_smsep[0:nrecs-1L]
 trad_raw_data.tfreq = tmp_tfreq[0:nrecs-1L]
 trad_raw_data.noise = tmp_noise[0:nrecs-1L]
 trad_raw_data.atten = tmp_atten[0:nrecs-1L]
 trad_raw_data.mplgs = tmp_mplgs[0:nrecs-1L]
+trad_raw_data.pwr0  = tmp_pwr0[0:nrecs-1L,*]
+trad_raw_data.lagtime = tmp_lagtime[0:nrecs-1L,*]
 trad_raw_data.acf_r = tmp_acf_r[0:nrecs-1L,*,*]
 trad_raw_data.acf_i = tmp_acf_i[0:nrecs-1L,*,*]
 trad_raw_data.xcf_r = tmp_xcf_r[0:nrecs-1L,*,*]
 trad_raw_data.xcf_i = tmp_xcf_i[0:nrecs-1L,*,*]
+trad_raw_data.ifmode = tmp_ifmode[0:nrecs-1L]
 
 ; release some memory
 tmp_acf_r = 0b
@@ -367,20 +494,46 @@ nids = n_elements(scan_ids)
 ;             = -32768 - camp beam - don't include in scan
 ; but we need to take care if data from multiple channels
 ; is available
-for s=0, nids-1 do begin
-	nscans = 0L
-	sinds = where(trad_raw_data.scan_id eq scan_ids[s], cc)
-	for i=0L, cc-1L do begin
-		if abs(trad_raw_data.scan_mark[sinds[i]]) eq 1 then begin
-			if i ne 0L then $
-				nscans += 1L
-			trad_raw_data.beam_scan[sinds[i]] = nscans
-		endif else if trad_raw_data.scan_mark[sinds[i]] eq 0 then $
-			trad_raw_data.beam_scan[sinds[i]] = nscans $
-		else if trad_raw_data.scan_mark[sinds[i]] eq -32768 THEN $
-			trad_raw_data.beam_scan[sinds[i]] = -1L
+nscans = 0L
+for c=0, n_elements(channels)-1 do begin
+	cinds = where(trad_raw_data.channel eq channels[c], ncc)
+	a_scan_mark = trad_raw_data.scan_mark[cinds]
+	scm = where(abs(a_scan_mark) eq 1, cc)
+	if cc eq 0L then begin
+		prinfo, 'No scan flag set, for some reason.'
+		continue
+	endif
+	if scm[0] ne 0L then $
+		scm = [0L, scm]
+	if scm[cc-1] ne nrecs-1 then $
+		scm = [scm, ncc]
+	for s=0L, n_elements(scm)-2L do begin
+		ginds = where(abs(a_scan_mark[scm[s]:scm[s+1L]-1L]) le 1, complement=ninds, sc, ncomplement=nc)
+		ttmp = lindgen(scm[s+1L]-scm[s]) + scm[s]
+		if sc gt 0 then begin
+			;((trad_raw_data.beam_scan[cinds])[scm[s]:scm[s+1L]-1L])[ginds] = replicate(nscan, sc)
+			trad_raw_data.beam_scan[cinds[ttmp[ginds]]] = replicate(nscans, sc)
+			nscans += 1L
+		endif
+		if nc gt 0 then $
+			;((trad_raw_data.beam_scan[cinds])[scm[s]:scm[s+1L]-1L])[ninds] = -1L
+			trad_raw_data.beam_scan[cinds[ttmp[ninds]]] = -1L
 	endfor
 endfor
+;for s=0, nids-1 do begin
+;	nscans = 0L
+;	sinds = where(trad_raw_data.scan_id eq scan_ids[s], cc)
+;	for i=0L, cc-1L do begin
+;		if abs(trad_raw_data.scan_mark[sinds[i]]) eq 1 then begin
+;			if i ne 0L then $
+;				nscans += 1L
+;			trad_raw_data.beam_scan[sinds[i]] = nscans
+;		endif else if trad_raw_data.scan_mark[sinds[i]] eq 0 then $
+;			trad_raw_data.beam_scan[sinds[i]] = nscans $
+;		else if trad_raw_data.scan_mark[sinds[i]] eq -32768 THEN $
+;			trad_raw_data.beam_scan[sinds[i]] = -1L
+;	endfor
+;endfor
 
 ; find all channels
 channels = trad_raw_data.channel[uniq(trad_raw_data.channel, $
@@ -388,6 +541,17 @@ channels = trad_raw_data.channel[uniq(trad_raw_data.channel, $
 
 ; put new structure in common block
 rad_raw_data = trad_raw_data
+
+; determine whether inteferometer data is present
+; 0: no interferometer data
+; 1: inteferometer data for the ENTIRE time that is loaded
+; 2: interferometer data for SOME time
+info_xcf = 0b
+dummy = where( trad_raw_data.xcf, xcc )
+if xcc eq nrecs then $
+	info_xcf = 1b $
+else if xcc gt 0L then $
+	info_xcf = 2b
 
 ; set up new info structure
 trad_raw_info = { $
@@ -398,6 +562,7 @@ trad_raw_info = { $
 	id: network[ind].id, $
 	scan_ids: scan_ids, $
 	channels: channels, $
+	xcf: info_xcf, $
 	glat: network[ind].site[_snum].geolat, $
 	glon: network[ind].site[_snum].geolon, $
 	mlat: 0.0, $
@@ -405,10 +570,10 @@ trad_raw_info = { $
 	nbeams: network[ind].site[_snum].maxbeam, $
 	ngates: maxgates, $
 	bmsep: network[ind].site[_snum].bmsep, $
-	fov_loc_full: ptr_new(), $
-	fov_loc_center: ptr_new(), $
+;	fov_loc_full: ptr_new(), $
+;	fov_loc_center: ptr_new(), $
 	parameters: ['juls','ysec','beam','scan_id','scan_mark',$
-		'channel','acf_i','acf_r','mplgs',$
+		'channel','xcf','acf_i','acf_r','mplgs',$
 		'lagfr','smsep','tfreq','noise','atten'], $
 	nscans: nscans+1L, $
 	dat: olddat, $
@@ -421,15 +586,15 @@ trad_raw_info.mlat = tpos[0]
 trad_raw_info.mlon = tpos[1]
 
 ; delete old pointers otherwise they stay in memory
-if ptr_valid(rad_raw_info.fov_loc_full) then $
-	ptr_free, rad_raw_info.fov_loc_full
-if ptr_valid(rad_raw_info.fov_loc_center) then $
-	ptr_free, rad_raw_info.fov_loc_center
+;if ptr_valid(rad_raw_info.fov_loc_full) then $
+;	ptr_free, rad_raw_info.fov_loc_full
+;if ptr_valid(rad_raw_info.fov_loc_center) then $
+;	ptr_free, rad_raw_info.fov_loc_center
 ; write to common block
 rad_raw_info = trad_raw_info
 
 ; define beam and gate positions for radar
-rad_raw_define_beams, id=rad_raw_info.id
+;rad_raw_define_beams, id=rad_raw_info.id
 
 ;help, rad_fit_info
 ;help, rad_fit_info, /str

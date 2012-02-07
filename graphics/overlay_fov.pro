@@ -108,28 +108,117 @@
 ; GRID: Set this keyword to plot grid lines within the FoV, every 4 beams and
 ; every 10 range gates.
 ;
+; LAGFR0:  Set this keyword to send a custom lagfr0 value to RAD_DEFINE_BEAMS.
+; the value you should use is stored in (*RAD_FIT_DATA[inx]).lagfr.  If you do not set
+; this keyword, the default value of 1200. will be used.  Make sure you set this
+; correctly if you want your FOV's to be the right size!!
+;
+; SMSEP0:  Set this keyword to send a custom smsep0 value to RAD_DEFINE_BEAMS.
+; the value you should use is stored in (*RAD_FIT_DATA[inx]).smsep.  If you do not set
+; this keyword, the default value of 300. will be used.  Make sure you set this
+; correctly if you want your FOV's to be the right size!!
+;
+; NO_FOV: Set this keyword to disable the plotting of the whole radar FOV.
+; This is useful if you only want to plot a marked region or a fill.
+;
 ; EXAMPLE: 
 ; 
+; COPYRIGHT:
+; Non-Commercial Purpose License
+; Copyright © November 14, 2006 by Virginia Polytechnic Institute and State University
+; All rights reserved.
+; Virginia Polytechnic Institute and State University (Virginia Tech) owns the DaViT
+; software and its associated documentation (“Software”). You should carefully read the
+; following terms and conditions before using this software. Your use of this Software
+; indicates your acceptance of this license agreement and all terms and conditions.
+; You are hereby licensed to use the Software for Non-Commercial Purpose only. Non-
+; Commercial Purpose means the use of the Software solely for research. Non-
+; Commercial Purpose excludes, without limitation, any use of the Software, as part of, or
+; in any way in connection with a product or service which is sold, offered for sale,
+; licensed, leased, loaned, or rented. Permission to use, copy, modify, and distribute this
+; compilation for Non-Commercial Purpose is hereby granted without fee, subject to the
+; following terms of this license.
+; Copies and Modifications
+; You must include the above copyright notice and this license on any copy or modification
+; of this compilation. Each time you redistribute this Software, the recipient automatically
+; receives a license to copy, distribute or modify the Software subject to these terms and
+; conditions. You may not impose any further restrictions on this Software or any
+; derivative works beyond those restrictions herein.
+; You agree to use your best efforts to provide Virginia Polytechnic Institute and State
+; University (Virginia Tech) with any modifications containing improvements or
+; extensions and hereby grant Virginia Tech a perpetual, royalty-free license to use and
+; distribute such modifications under the terms of this license. You agree to notify
+; Virginia Tech of any inquiries you have for commercial use of the Software and/or its
+; modifications and further agree to negotiate in good faith with Virginia Tech to license
+; your modifications for commercial purposes. Notices, modifications, and questions may
+; be directed by e-mail to Stephen Cammer at cammer@vbi.vt.edu.
+; Commercial Use
+; If you desire to use the software for profit-making or commercial purposes, you agree to
+; negotiate in good faith a license with Virginia Tech prior to such profit-making or
+; commercial use. Virginia Tech shall have no obligation to grant such license to you, and
+; may grant exclusive or non-exclusive licenses to others. You may contact Stephen
+; Cammer at email address cammer@vbi.vt.edu to discuss commercial use.
+; Governing Law
+; This agreement shall be governed by the laws of the Commonwealth of Virginia.
+; Disclaimer of Warranty
+; Because this software is licensed free of charge, there is no warranty for the program.
+; Virginia Tech makes no warranty or representation that the operation of the software in
+; this compilation will be error-free, and Virginia Tech is under no obligation to provide
+; any services, by way of maintenance, update, or otherwise.
+; THIS SOFTWARE AND THE ACCOMPANYING FILES ARE LICENSED “AS IS”
+; AND WITHOUT WARRANTIES AS TO PERFORMANCE OR
+; MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED
+; OR IMPLIED. NO WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS
+; OFFERED. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF
+; THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE,
+; YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
+; CORRECTION.
+; Limitation of Liability
+; IN NO EVENT WILL VIRGINIA TECH, OR ANY OTHER PARTY WHO MAY
+; MODIFY AND/OR REDISTRIBUTE THE PRORAM AS PERMITTED ABOVE, BE
+; LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
+; INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+; INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS
+; OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED
+; BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE
+; WITH ANY OTHER PROGRAMS), EVEN IF VIRGINIA TECH OR OTHER PARTY
+; HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+; Use of Name
+; Users will not use the name of the Virginia Polytechnic Institute and State University nor
+; any adaptation thereof in any publicity or advertising, without the prior written consent
+; from Virginia Tech in each case.
+; Export License
+; Export of this software from the United States may require a specific license from the
+; United States Government. It is the responsibility of any person or organization
+; contemplating export to obtain such a license before exporting.
+;
 ; MODIFICATION HISTORY: 
 ; Based on Steve Milan's OVERLAY_POLAR_COAST.
-; Written by Lasse Clausen, Nov, 24 2009
+; Written by Lasse Clausen, Nov 24, 2009
+; Modified by Nathaniel Frissell, Oct 10, 2011
+;       Add LAGFR0, SMSEP0, and NO_FOV keywords.
 ;-
 pro overlay_fov, coords=coords, date=date, time=time, jul=jul, $
 	silent=silent, $
 	names=names, ids=ids, $
 	mark_region=mark_region, rotate=rotate, myopic=myopic, $
-	no_fill=no_fill, $
+	no_fill=no_fill, no_mark_fill=no_mark_fill, $
 	fov_linestyle=fov_linestyle, fov_linecolor=fov_linecolor, $
 	fov_linethick=fov_linethick, fov_fillcolor=fov_fillcolor, $
+	mark_linestyle=mark_linestyle, mark_linecolor=mark_linecolor, $
+	mark_linethick=mark_linethick, mark_fillcolor=mark_fillcolor, $
 	project_to_other_hemi=project_to_other_hemi, external_model=external_model, internal_model=internal_model, param=param, $
 	annotate=annotate, charsize=charsize, charthick=charthick, charcolor=charcolor, orientation=orientation, offsets=offsets, $
-	nbeams=nbeams, nranges=nranges, grid=grid, height=height
+	nbeams=nbeams, nranges=nranges, grid=grid, height=height, bmsep=bmsep   $
+        ,LAGFR0                 = lagFr0                                        $
+        ,SMSEP0                 = smSep0                                        $
+        ,NO_FOV                 = no_fov
 
 common radarinfo
 common rad_data_blk
 
 if ~keyword_set(fov_linethick) then $
-	fov_linethick = 3
+	fov_linethick = !p.thick
 
 if n_elements(fov_linestyle) eq 0 then $
 	fov_linestyle = 0
@@ -139,6 +228,18 @@ if n_elements(fov_linecolor) eq 0 then $
 
 if n_elements(fov_fillcolor) eq 0 then $
 	fov_fillcolor = get_gray()
+
+if ~keyword_set(mark_linethick) then $
+	mark_linethick = !p.thick
+
+if n_elements(mark_linestyle) eq 0 then $
+	mark_linestyle = 0
+
+if n_elements(mark_linecolor) eq 0 then $
+	mark_linecolor = get_foreground()
+
+if n_elements(mark_fillcolor) eq 0 then $
+	mark_fillcolor = get_gray()
 
 if ~keyword_set(coords) then $
 	coords = get_coordinates()
@@ -194,23 +295,6 @@ caldat, jul, mm, dd, year
 yrsec = (jul-julday(1,1,year,0,0,0))*86400.d
 s = TimeYrsecToYMDHMS(year, mm, dd, hh, ii, ss, yrsec)
 
-;print, year, mm, dd, hh, ii, ss, yrsec
-;return
-;if in_mlt then begin
-;	if ~keyword_set(jul) then begin
-;		prinfo, 'Need to set JUL or DATE/TIME keyword when using MLT coordinate system.'
-;		return
-;	endif
-	; get ut seconds after Jan 1 year for mlt calculation
-;	caldat, jul, mm, dd, year
-;	yrsec = (jul-julday(1,1,year,0,0,0))*86400.d
-;endif else begin
-	; need this for the site selection in the hardware file
-	; simply select latest site
-;	year = 2020
-;	yrsec = 1L
-;endelse
-
 if ~keyword_set(internal_model) then $
 	internal_model = 'igrf'
 
@@ -244,7 +328,7 @@ if ~keyword_set(names) and ~keyword_set(ids) then $
 	ids = (*rad_fit_info[rad_fit_get_data_index()]).id
 
 if keyword_set(names) then begin
-	radar_infos = make_array(n_elements(names), 7, /float)
+	radar_infos = make_array(n_elements(names), 8, /float)
 	for i=0, n_elements(names)-1 do begin
 		tmp = where(network[*].code[0] eq strlowcase(names[i]),count)
 		if count eq 0 then begin
@@ -252,26 +336,23 @@ if keyword_set(names) then begin
 			return
 		endif
 		site = RadarYMDHMSGetSite(network[tmp], year, mm, dd, hh, ii, ss)
-		;if site.tval eq 0L then $
-		;	site = network[tmp].site[0]
-		;radar_infos[i,0] = network[tmp].id
-		;radar_infos[i,1] = tmp
-		;radar_infos[i,2] = network[tmp].site[(network[tmp].snum-1) > 0].maxrange
-		;radar_infos[i,3] = ( keyword_set(nbeams) ? nbeams : network[tmp].site[(network[tmp].snum-1) > 0].maxbeam )
-		;radar_infos[i,4] = network[tmp].site[(network[tmp].snum-1) > 0].bmsep
-		;radar_infos[i,5] = network[tmp].site[(network[tmp].snum-1) > 0].geolat
-		;radar_infos[i,6] = network[tmp].site[(network[tmp].snum-1) > 0].geolon
-		radar_infos[i,0] = network[tmp].id
-		radar_infos[i,1] = tmp
-		radar_infos[i,2] = ( keyword_set(nranges) ? nranges : site.maxrange )
-		radar_infos[i,3] = ( keyword_set(nbeams) ? nbeams : site.maxbeam )
-		radar_infos[i,4] = site.bmsep
-		radar_infos[i,5] = site.geolat
-		radar_infos[i,6] = site.geolon
+		if size(site, /type) ne 8 then begin
+			prinfo, 'No site found for '+strupcase(names[i])+' at '+format_juldate(jul)
+			radar_infos[i,7] = -1.
+		endif else begin
+			radar_infos[i,0] = network[tmp].id
+			radar_infos[i,1] = tmp
+			radar_infos[i,2] = ( keyword_set(nranges) ? nranges : site.maxrange )
+			radar_infos[i,3] = ( keyword_set(nbeams) ? nbeams : site.maxbeam )
+			radar_infos[i,4] = site.bmsep
+			radar_infos[i,5] = site.geolat
+			radar_infos[i,6] = site.geolon
+			radar_infos[i,7] = +1.
+		endelse
 	endfor
 	ids = reform(radar_infos[*,0])
 endif else if keyword_set(ids) then begin
-	radar_infos = make_array(n_elements(ids), 7, /float)
+	radar_infos = make_array(n_elements(ids), 8, /float)
 	for i=0, n_elements(ids)-1 do begin
 		tmp = where(network[*].id eq ids[i],count)
 		if count eq 0 then begin
@@ -279,30 +360,31 @@ endif else if keyword_set(ids) then begin
 			return
 		endif
 		site = RadarYMDHMSGetSite(network[tmp], year, mm, dd, hh, ii, ss)
-		;if site.tval eq 0L then $
-		;	site = network[tmp].site[0]
-		;radar_infos[i,0] = network[tmp].id
-		;radar_infos[i,1] = tmp
-		;radar_infos[i,2] = network[tmp].site[(network[tmp].snum-1) > 0].maxrange
-		;radar_infos[i,3] = ( keyword_set(nbeams) ? nbeams : network[tmp].site[(network[tmp].snum-1) > 0].maxbeam )
-		;radar_infos[i,4] = network[tmp].site[(network[tmp].snum-1) > 0].bmsep
-		;radar_infos[i,5] = network[tmp].site[(network[tmp].snum-1) > 0].geolat
-		;radar_infos[i,6] = network[tmp].site[(network[tmp].snum-1) > 0].geolon
-		radar_infos[i,0] = network[tmp].id
-		radar_infos[i,1] = tmp
-		radar_infos[i,2] = ( keyword_set(nranges) ? nranges : site.maxrange )
-		radar_infos[i,3] = ( keyword_set(nbeams) ? nbeams : site.maxbeam )
-		radar_infos[i,4] = site.bmsep
-		radar_infos[i,5] = site.geolat
-		radar_infos[i,6] = site.geolon
+		if size(site, /type) ne 8 then begin
+			prinfo, 'No site found for '+strupcase(names[i])+' at '+format_juldate(jul)
+			radar_infos[i,7] = -1.
+		endif else begin
+			radar_infos[i,0] = network[tmp].id
+			radar_infos[i,1] = tmp
+			radar_infos[i,2] = ( keyword_set(nranges) ? nranges : site.maxrange )
+			radar_infos[i,3] = ( keyword_set(nbeams) ? nbeams : site.maxbeam )
+			radar_infos[i,4] = site.bmsep
+			radar_infos[i,5] = site.geolat
+			radar_infos[i,6] = site.geolon
+			radar_infos[i,7] = +1.
+		endelse
 	endfor
 endif
-nstats = n_elements(ids)
+ginds = where(radar_infos[*,7] eq 1., nstats)
+if nstats eq 0 then $
+	return $
+else $
+	radar_infos = radar_infos[ginds,*]
 
 if keyword_set(offsets) then begin
 	if n_elements(offsets) eq 2 then $
 		_offsets = rebin(offsets, 2, nstats) $
-	else if n_elements(offsets) eq 2*nstats then $
+	else if n_elements(offsets[ginds]) eq 2*nstats then $
 		_offsets = offsets $
 	else begin
 		prinfo, 'OFFSETS must be 2-element vector or 2xnstats element array.'
@@ -351,7 +433,7 @@ for i=0, nstats-1 do begin
 			endif else begin
 				xyz_to_polar, out_arr/!re, mag=alt, theta=glat, phi=glon
 				if _coords eq 'magn' then begin
-					tmpp = cnvcoord(glat, glon, .5)
+					tmpp = cnvcoord(glat[0], glon[0], .5)
 					radar_infos[i,5] = tmpp[0]
 					radar_infos[i,6] = tmpp[1]
 				endif else begin
@@ -369,8 +451,9 @@ for i=0, nstats-1 do begin
 	endelse
 endfor
 
-_lagfr0 = 1200.
-_smsep0 = 300.
+IF N_ELEMENTS(lagfr0) EQ 0 THEN _lagfr0 = 1200.  ELSE _lagfr0    = lagFr0
+IF N_ELEMENTS(smSep0) EQ 0 THEN _smsep0 = 300.   ELSE _smSep0    = smSep0
+
 if keyword_set(myopic) then begin
 	_lagfr0 = 1200./3.
 	_smsep0 = 300./3.
@@ -386,14 +469,14 @@ plot_fov = make_array(nstats, 2, $
 ; loop through stations
 for i=0, nstats-1 do begin
 ;	print, ids[i], radar_infos[i,3], radar_infos[i,2], radar_infos[i,4], year, yrsec, _coords
-	rad_define_beams, ids[i], radar_infos[i,3], radar_infos[i,2], radar_infos[i,4], year, yrsec, coords=_coords, $
-		lagfr0=_lagfr0, smsep0=_smsep0, fov_loc_center=fov_loc_center, height=height
-;	print, fov_loc_center
+	rad_define_beams, ids[i], radar_infos[i,3], radar_infos[i,2], year, yrsec, $
+		coords=_coords, bmsep=bmsep, $
+		lagfr0=_lagfr0, smsep0=_smsep0, fov_loc_center=fov_loc_center, fov_loc_full=fov_loc_full, height=height
 	; fill local array
 	for b=0, radar_infos[i,3] do begin
 		for r=0, radar_infos[i,2] do begin
-			lat = fov_loc_center[0,b,r]
-			lon = fov_loc_center[1,b,r]
+			lat = fov_loc_full[0,0,b,r]
+			lon = fov_loc_full[1,3,b,r]
 			if keyword_set(project_to_other_hemi) then begin
 				if internal_model eq 'dipole' then begin
 					if _coords ne 'magn' then begin
@@ -443,7 +526,7 @@ for i=0, nstats-1 do begin
 					endif else begin
 						xyz_to_polar, out_arr/!re, mag=alt, theta=glat, phi=glon
 						if _coords eq 'magn' then begin
-							tmpp = cnvcoord(glat, glon, 200.)
+							tmpp = cnvcoord(glat[0], glon[0], 200.)
 							lat = tmpp[0]
 							lon = tmpp[1]
 						endif else begin
@@ -476,7 +559,7 @@ if ~keyword_set(no_fill) then begin
 	; load a lighter gray for the fovs
 	idx = get_gray()
 	tvlct, rr, gg, bb, /get
-	tvlct, 220, 220, 220, idx
+	tvlct, 240, 240, 240, idx
 
 	for i=0, nstats-1 do begin
 		;- plot full fov
@@ -527,16 +610,6 @@ if keyword_set(mark_region) then begin
 		;- fill regions
 		for i=0, nstats-1 do begin
 			aregion = mark_region[*,i]
-			;print, aregion[0] ge 0
-			;print, aregion[1] ge 0
-			;print, aregion[1] gt aregion[0]
-			;print, aregion[2] ge 0
-			;print, aregion[3] ge 0
-			;print, aregion[3] gt aregion[2]
-			;print, aregion[0] lt rad_fit_info.nbeams
-			;print, aregion[1] lt rad_fit_info.nbeams
-			;print, aregion[2] le rad_fit_info.ngates
-			;print, aregion[3] le rad_fit_info.ngates
 			if aregion[0] ge 0 and aregion[1] ge 0 and aregion[1] gt aregion[0] and $
 				aregion[2] ge 0 and aregion[3] ge 0 and aregion[3] gt aregion[2] and $
 				aregion[0] le radar_infos[i,3] and aregion[1] le radar_infos[i,3] and $
@@ -557,40 +630,19 @@ if keyword_set(mark_region) then begin
 				;if keyword_set(rotate) then $
 				;	swap, xx, yy, /right
 
-				polyfill, xx, yy, color=fov_fillcolor, noclip=0
+				if ~keyword_set(no_mark_fill) then $
+					polyfill, xx, yy, color=mark_fillcolor, noclip=0
+
+				oplot, xx, yy, color=get_background(), thick=3.*mark_linethick, $
+					noclip=0
+				oplot, xx, yy, color=mark_linecolor, thick=mark_linethick, linestyle=mark_linestyle, $
+					noclip=0
+
 			endif else $
 				prinfo, 'Something is wrong in MARK_REGION [start_beam,end_beam,start_range,end_range]: '+strjoin(string(aregion)), /forc
 		endfor
-		;- then the outside
-		for i=0, nstats-1 do begin
-			aregion = mark_region[*,i]
-			if aregion[0] ge 0 and aregion[1] ge 0 and aregion[1] gt aregion[0] and $
-				aregion[2] ge 0 and aregion[3] ge 0 and aregion[3] gt aregion[2] and $
-				aregion[0] lt radar_infos[i,3] and aregion[1] lt radar_infos[i,3] and $
-				aregion[2] lt radar_infos[i,2] and aregion[3] lt radar_infos[i,2] then begin
-				xx = [reform(plot_fov[i,0,aregion[0],aregion[2]:aregion[3]]), $
-					reverse(reform(plot_fov[i,0,aregion[1],aregion[2]:aregion[3]])),$
-					plot_fov[i,0,aregion[0],aregion[2]]]
-				yy = [reform(plot_fov[i,1,aregion[0],aregion[2]:aregion[3]]), $
-					reverse(reform(plot_fov[i,1,aregion[1],aregion[2]:aregion[3]])), $
-					plot_fov[i,1,aregion[0],aregion[2]]]
-
-				if n_elements(rotate) ne 0 then begin
-					_x1 = cos(rotate*!dtor)*xx - sin(rotate*!dtor)*yy
-					_y1 = sin(rotate*!dtor)*xx + cos(rotate*!dtor)*yy
-					xx = _x1
-					yy = _y1
-				endif
-				;if keyword_set(rotate) then $
-				;	swap, xx, yy, /right
-
-				oplot, xx, yy, color=fov_linecolor, thick=fov_linethick, linestyle=fov_linestyle, $
-					noclip=0
-			endif
-		endfor
 	endif
 endif
-
 for i=0, nstats-1 do begin
 ;- plot full fov
 
@@ -622,32 +674,33 @@ for i=0, nstats-1 do begin
 				noclip=0
 		endfor
 	endif
+        IF ~KEYWORD_SET(no_fov) THEN BEGIN
+            xx = [reform(plot_fov[i,0,0,0:radar_infos[i,2]]), $
+                    reform(plot_fov[i,0,0:radar_infos[i,3],radar_infos[i,2]]), $
+                    reverse(reform(plot_fov[i,0,radar_infos[i,3],0:radar_infos[i,2]])), $
+                    reverse(reform(plot_fov[i,0,0:radar_infos[i,3],0])), $
+                    plot_fov[i,0,0,0] $
+            ]
+            yy = [reform(plot_fov[i,1,0,0:radar_infos[i,2]]), $
+                    reform(plot_fov[i,1,0:radar_infos[i,3],radar_infos[i,2]]), $
+                    reverse(reform(plot_fov[i,1,radar_infos[i,3],0:radar_infos[i,2]])), $
+                    reverse(reform(plot_fov[i,1,0:radar_infos[i,3],0])), $
+                    plot_fov[i,1,0,0] $
+            ]
 
-	xx = [reform(plot_fov[i,0,0,0:radar_infos[i,2]]), $
-		reform(plot_fov[i,0,0:radar_infos[i,3],radar_infos[i,2]]), $
-		reverse(reform(plot_fov[i,0,radar_infos[i,3],0:radar_infos[i,2]])), $
-		reverse(reform(plot_fov[i,0,0:radar_infos[i,3],0])), $
-		plot_fov[i,0,0,0] $
-	]
-	yy = [reform(plot_fov[i,1,0,0:radar_infos[i,2]]), $
-		reform(plot_fov[i,1,0:radar_infos[i,3],radar_infos[i,2]]), $
-		reverse(reform(plot_fov[i,1,radar_infos[i,3],0:radar_infos[i,2]])), $
-		reverse(reform(plot_fov[i,1,0:radar_infos[i,3],0])), $
-		plot_fov[i,1,0,0] $
-	]
+            if n_elements(rotate) ne 0 then begin
+                    _x1 = cos(rotate*!dtor)*xx - sin(rotate*!dtor)*yy
+                    _y1 = sin(rotate*!dtor)*xx + cos(rotate*!dtor)*yy
+                    xx = _x1
+                    yy = _y1
+            endif
+            ;if keyword_set(rotate) then $
+            ;	swap, xx, yy, /right
 
-	if n_elements(rotate) ne 0 then begin
-		_x1 = cos(rotate*!dtor)*xx - sin(rotate*!dtor)*yy
-		_y1 = sin(rotate*!dtor)*xx + cos(rotate*!dtor)*yy
-		xx = _x1
-		yy = _y1
-	endif
-	;if keyword_set(rotate) then $
-	;	swap, xx, yy, /right
-
-	oplot, xx, yy, noclip=0, thick=3.*fov_linethick, color=get_background()
-	oplot, xx, yy, color=fov_linecolor, thick=fov_linethick, linestyle=fov_linestyle, $
-		noclip=0
+            oplot, xx, yy, noclip=0, thick=3.*fov_linethick, color=get_background()
+            oplot, xx, yy, color=fov_linecolor, thick=fov_linethick, linestyle=fov_linestyle, $
+                    noclip=0
+        ENDIF
 
 	load_usersym, /circle
 	;- plot the radar position
@@ -681,9 +734,9 @@ for i=0, nstats-1 do begin
 		endif
 		nxoff = _offsets[0,i]*cos(orientation*!dtor) - _offsets[1,i]*sin(orientation*!dtor)
 		nyoff = _offsets[0,i]*sin(orientation*!dtor) + _offsets[1,i]*cos(orientation*!dtor)
-		xyouts, rxx+nxoff, ryy+nyoff, astring, charthick=10.*charthick, $
+		xyouts, rxx+nxoff, ryy+nyoff, astring, charthick=5.*charthick, $
 			charsize=charsize, orientation=orientation, noclip=0, align=align, color=get_white()
-		xyouts, rxx+nxoff, ryy+nyoff, astring, charthick=2.*charthick, $
+		xyouts, rxx+nxoff, ryy+nyoff, astring, charthick=charthick, $
 			charsize=charsize, orientation=orientation, noclip=0, color=charcolor, align=align
 	endif
 

@@ -1,3 +1,118 @@
+;+
+; NAME: 
+; DMS_SSJ_READ
+; 
+; PURPOSE:
+; This procedure reads ion or electron spectrum data
+; in the DMS_DATA_BLK common block.
+; 
+; CATEGORY:
+; DMSP
+; 
+; CALLING SEQUENCE: 
+; DMS_SSJ_READ, Date, Sat
+;
+; INPUTS:
+; Date: A scalar or 2-element vector giving the time range to plot, 
+; in YYYYMMDD or MMMYYYY format.
+;
+; Sat: The DMSP satellite number, currently active are 12-18.
+;
+; KEYWORD PARAMETERS:
+; TIME: A 2-element vector giving the time range to plot, in HHII format.
+;
+; LONG: Set this keyword to indicate that the TIME value is in HHIISS
+; format rather than HHII format.
+;
+; SILENT: Set this keyword to surpress messages.
+;
+; FORCE: Read data even if DSMP_CHECK_DATA_LOADED returns true.
+;
+; FILENAME: A scalar or array of strings containing the filenames
+; of the data files to read.
+;
+; FILEDATE: When FILENAME is set, set this keyword to the 
+; date for which the data is read. If FILEDATE is not provided
+; DSM_SSJ_READ will attempt to extract the date from teh filename.
+;
+; FILESAT: When FILENAME is set, set this keyword to the 
+; satellite for which the data is read. If FILESAT is not provided
+; DSM_SSJ_READ will attempt to extract the date from teh filename.
+; 
+; EXAMPLE:
+;
+; COPYRIGHT:
+; Non-Commercial Purpose License
+; Copyright © November 14, 2006 by Virginia Polytechnic Institute and State University
+; All rights reserved.
+; Virginia Polytechnic Institute and State University (Virginia Tech) owns the DaViT
+; software and its associated documentation (“Software”). You should carefully read the
+; following terms and conditions before using this software. Your use of this Software
+; indicates your acceptance of this license agreement and all terms and conditions.
+; You are hereby licensed to use the Software for Non-Commercial Purpose only. Non-
+; Commercial Purpose means the use of the Software solely for research. Non-
+; Commercial Purpose excludes, without limitation, any use of the Software, as part of, or
+; in any way in connection with a product or service which is sold, offered for sale,
+; licensed, leased, loaned, or rented. Permission to use, copy, modify, and distribute this
+; compilation for Non-Commercial Purpose is hereby granted without fee, subject to the
+; following terms of this license.
+; Copies and Modifications
+; You must include the above copyright notice and this license on any copy or modification
+; of this compilation. Each time you redistribute this Software, the recipient automatically
+; receives a license to copy, distribute or modify the Software subject to these terms and
+; conditions. You may not impose any further restrictions on this Software or any
+; derivative works beyond those restrictions herein.
+; You agree to use your best efforts to provide Virginia Polytechnic Institute and State
+; University (Virginia Tech) with any modifications containing improvements or
+; extensions and hereby grant Virginia Tech a perpetual, royalty-free license to use and
+; distribute such modifications under the terms of this license. You agree to notify
+; Virginia Tech of any inquiries you have for commercial use of the Software and/or its
+; modifications and further agree to negotiate in good faith with Virginia Tech to license
+; your modifications for commercial purposes. Notices, modifications, and questions may
+; be directed by e-mail to Stephen Cammer at cammer@vbi.vt.edu.
+; Commercial Use
+; If you desire to use the software for profit-making or commercial purposes, you agree to
+; negotiate in good faith a license with Virginia Tech prior to such profit-making or
+; commercial use. Virginia Tech shall have no obligation to grant such license to you, and
+; may grant exclusive or non-exclusive licenses to others. You may contact Stephen
+; Cammer at email address cammer@vbi.vt.edu to discuss commercial use.
+; Governing Law
+; This agreement shall be governed by the laws of the Commonwealth of Virginia.
+; Disclaimer of Warranty
+; Because this software is licensed free of charge, there is no warranty for the program.
+; Virginia Tech makes no warranty or representation that the operation of the software in
+; this compilation will be error-free, and Virginia Tech is under no obligation to provide
+; any services, by way of maintenance, update, or otherwise.
+; THIS SOFTWARE AND THE ACCOMPANYING FILES ARE LICENSED “AS IS”
+; AND WITHOUT WARRANTIES AS TO PERFORMANCE OR
+; MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED
+; OR IMPLIED. NO WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS
+; OFFERED. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF
+; THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE,
+; YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
+; CORRECTION.
+; Limitation of Liability
+; IN NO EVENT WILL VIRGINIA TECH, OR ANY OTHER PARTY WHO MAY
+; MODIFY AND/OR REDISTRIBUTE THE PRORAM AS PERMITTED ABOVE, BE
+; LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
+; INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+; INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS
+; OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED
+; BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE
+; WITH ANY OTHER PROGRAMS), EVEN IF VIRGINIA TECH OR OTHER PARTY
+; HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+; Use of Name
+; Users will not use the name of the Virginia Polytechnic Institute and State University nor
+; any adaptation thereof in any publicity or advertising, without the prior written consent
+; from Virginia Tech in each case.
+; Export License
+; Export of this software from the United States may require a specific license from the
+; United States Government. It is the responsibility of any person or organization
+; contemplating export to obtain such a license before exporting.
+;
+; MODIFICATION HISTORY:
+; Written by Lasse Clausen, Apr, 4 2010
+;-
 pro dms_ssj_read, date, sat, time=time, long=long, $
 	silent=silent, force=force, $
 	filename=filename, filedate=filedate, filesat=filesat
@@ -17,8 +132,8 @@ if ~keyword_set(filename) then begin
 		return
 	endif
 
-	if sat lt 6 or sat gt 18 or date gt 20101231 or date lt 19830101 then begin
-		prinfo, '19830101 <= date <= 20101231 and 6<= sat <= 18'
+	if sat lt 6 or sat gt 18 or date lt 19830101 then begin
+		prinfo, '19830101 <= date and 6<= sat <= 18'
 		return
 	endif
 
@@ -72,7 +187,7 @@ glat = fltarr(MAX_RECS)
 glon = fltarr(MAX_RECS)
 mlat = fltarr(MAX_RECS)
 mlon = fltarr(MAX_RECS)
-mlt = fltarr(MAX_RECS)
+amlt = fltarr(MAX_RECS)
 jne = fltarr(MAX_RECS)
 jee = fltarr(MAX_RECS)
 deflux = fltarr(MAX_RECS, 19)
@@ -130,12 +245,15 @@ for i=0, fc-1 do begin
 		prinfo, 'Reading '+o_file +' ('+files[i]+')', /force
 
 	tnrecs = (file_info(o_file)).size/128L
-	if tnrecs lt 1L then $
+	if tnrecs lt 1L then begin
+		file_delete, o_file
 		continue
-	
+	endif
+
 	; if temporary arrays are too small, warn and break
 	if nrecs gt MAX_RECS then begin
 		prinfo, 'To many data records in file for initialized array. Truncating.'
+		file_delete, o_file
 		break
 	endif
 
@@ -143,6 +261,7 @@ for i=0, fc-1 do begin
 	openr, ilun, o_file, /get_lun, /swap_if_big_endian
 	readu, ilun, data
 	free_lun, ilun
+	file_delete, o_file
 
 	if max(data[*].geomag_err_f) gt 0 then begin
 		w = where(data[*].geomag_err_f gt 0, nw)
@@ -164,10 +283,11 @@ for i=0, fc-1 do begin
 	juls[nrecs:nrecs+tnrecs-1L] = julday(1, data[*].doy, 2000+data[*].yr, 0, 0, data[*].sod)
 	glat[nrecs:nrecs+tnrecs-1L] = data[*].nlat/1e4
 	glon[nrecs:nrecs+tnrecs-1L] = data[*].nlon/1e4
-	mlat[nrecs:nrecs+tnrecs-1L] = data[*].mlat/1e4
-	mlon[nrecs:nrecs+tnrecs-1L] = data[*].mlon/1e4
-	mlt[nrecs:nrecs+tnrecs-1L] = data[*].mlt/1e5
-	hemi[nrecs:nrecs+tnrecs-1L] = sign(data[*].mlat)
+	tmp = cnvcoord(data[*].nlat/1e4, data[*].nlon/1e4, replicate(600., tnrecs))
+	mlat[nrecs:nrecs+tnrecs-1L] = tmp[0,*] ; data[*].mlat/1e4
+	mlon[nrecs:nrecs+tnrecs-1L] = tmp[1,*] ; data[*].mlon/1e4
+	amlt[nrecs:nrecs+tnrecs-1L] = mlt(  2000+data[*].yr, (juls[nrecs:nrecs+tnrecs-1L] - julday(1,1,2000+data[*].yr,0) )*86400.d, mlon[nrecs:nrecs+tnrecs-1L] ) ; data[*].mlt/1e5
+	hemi[nrecs:nrecs+tnrecs-1L] = sign(mlat[nrecs:nrecs+tnrecs-1L])
 	;************************************************************************************
 	; rescale
 	;************************************************************************************
@@ -200,6 +320,8 @@ for i=0, fc-1 do begin
 	if last_year ne data[0].yr then begin
 		dms_ssj_read_cal, 2000+data[0].yr, sat
 		last_year = data[0].yr
+		if ~ptr_valid( dms_ssj_info.calibration ) then $
+			return
 	endif
 
 	;******************************************************************************************
@@ -261,7 +383,7 @@ tdms_ssj_data.glat = (glat[0:nrecs-1L])[jinds]
 tdms_ssj_data.glon = (glon[0:nrecs-1L])[jinds]
 tdms_ssj_data.mlat = (mlat[0:nrecs-1L])[jinds]
 tdms_ssj_data.mlon = (mlon[0:nrecs-1L])[jinds]
-tdms_ssj_data.mlt = (mlt[0:nrecs-1L])[jinds]
+tdms_ssj_data.mlt = (amlt[0:nrecs-1L])[jinds]
 tdms_ssj_data.jne = (jne[0:nrecs-1L])[jinds]
 tdms_ssj_data.jee = (jee[0:nrecs-1L])[jinds]
 tdms_ssj_data.deflux = (deflux[0:nrecs-1L,*])[jinds,*]

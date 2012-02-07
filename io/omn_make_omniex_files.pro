@@ -3,19 +3,15 @@
 ; OMN_MAKE_OMNIEX_FILES
 ;
 ; PURPOSE: 
-; This procedure reads dailly ONMI data files in HRO format and splits them
-; into two files which are used as input to the map potential routines. 
-; One file contains the delays in 
-; year month day hour minut second dhour dminute
-; format, the other the IMF in 
-; year month day hour minut second bx by bz
+; This procedure reads dailly ONMI data files in HRO format and converts them
+; into a omniex file which is used as input to the map potential routines. 
+; The file contains the IMF in 
+; year month day hour minute second bx by bz
 ; format.
-; The map potential fitting routine (map_addmodel in RST) can be instructed
-; to read IMF data and delays from text files. However, we can't use
-; OMNI data as is because the IMF in the OMNI files is already lagged.
-; Hence after splitting into daily files we must write the delay times
-; in one ascii file and the de-delayed imf into a separate one. 
-; This procedure does just that.
+; The map potential fitting routine (map_addimf in RST) can be instructed
+; to read IMF data from a text file. OMNI data is already lagged so that
+; we tell map_addimf that the lag of the IMF data is 0, like so
+;  map_addimf -if omniexfile.asc -d 0:0 mapfile > mapfile
 ; The OMNI data should be obtained from
 ; ftp://nssdcftp.gsfc.nasa.gov/spacecraft_data/omni/high_res_omni/.
 ; 
@@ -27,11 +23,81 @@
 ;
 ; INPUTS:
 ; Filename: The name of the file containing the daily OMNI data in HRO format.
+; Can contain standard wildcards like * and ?.
 ;
 ; KEYWORD PARAMETERS:
 ; OUTDIR: Set this keyword to the directory in which the daily files will be stored.
 ;
 ; EXAMPLE:
+;
+; COPYRIGHT:
+; Non-Commercial Purpose License
+; Copyright © November 14, 2006 by Virginia Polytechnic Institute and State University
+; All rights reserved.
+; Virginia Polytechnic Institute and State University (Virginia Tech) owns the DaViT
+; software and its associated documentation (“Software”). You should carefully read the
+; following terms and conditions before using this software. Your use of this Software
+; indicates your acceptance of this license agreement and all terms and conditions.
+; You are hereby licensed to use the Software for Non-Commercial Purpose only. Non-
+; Commercial Purpose means the use of the Software solely for research. Non-
+; Commercial Purpose excludes, without limitation, any use of the Software, as part of, or
+; in any way in connection with a product or service which is sold, offered for sale,
+; licensed, leased, loaned, or rented. Permission to use, copy, modify, and distribute this
+; compilation for Non-Commercial Purpose is hereby granted without fee, subject to the
+; following terms of this license.
+; Copies and Modifications
+; You must include the above copyright notice and this license on any copy or modification
+; of this compilation. Each time you redistribute this Software, the recipient automatically
+; receives a license to copy, distribute or modify the Software subject to these terms and
+; conditions. You may not impose any further restrictions on this Software or any
+; derivative works beyond those restrictions herein.
+; You agree to use your best efforts to provide Virginia Polytechnic Institute and State
+; University (Virginia Tech) with any modifications containing improvements or
+; extensions and hereby grant Virginia Tech a perpetual, royalty-free license to use and
+; distribute such modifications under the terms of this license. You agree to notify
+; Virginia Tech of any inquiries you have for commercial use of the Software and/or its
+; modifications and further agree to negotiate in good faith with Virginia Tech to license
+; your modifications for commercial purposes. Notices, modifications, and questions may
+; be directed by e-mail to Stephen Cammer at cammer@vbi.vt.edu.
+; Commercial Use
+; If you desire to use the software for profit-making or commercial purposes, you agree to
+; negotiate in good faith a license with Virginia Tech prior to such profit-making or
+; commercial use. Virginia Tech shall have no obligation to grant such license to you, and
+; may grant exclusive or non-exclusive licenses to others. You may contact Stephen
+; Cammer at email address cammer@vbi.vt.edu to discuss commercial use.
+; Governing Law
+; This agreement shall be governed by the laws of the Commonwealth of Virginia.
+; Disclaimer of Warranty
+; Because this software is licensed free of charge, there is no warranty for the program.
+; Virginia Tech makes no warranty or representation that the operation of the software in
+; this compilation will be error-free, and Virginia Tech is under no obligation to provide
+; any services, by way of maintenance, update, or otherwise.
+; THIS SOFTWARE AND THE ACCOMPANYING FILES ARE LICENSED “AS IS”
+; AND WITHOUT WARRANTIES AS TO PERFORMANCE OR
+; MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED
+; OR IMPLIED. NO WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS
+; OFFERED. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF
+; THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE,
+; YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
+; CORRECTION.
+; Limitation of Liability
+; IN NO EVENT WILL VIRGINIA TECH, OR ANY OTHER PARTY WHO MAY
+; MODIFY AND/OR REDISTRIBUTE THE PRORAM AS PERMITTED ABOVE, BE
+; LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
+; INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+; INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS
+; OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED
+; BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE
+; WITH ANY OTHER PROGRAMS), EVEN IF VIRGINIA TECH OR OTHER PARTY
+; HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+; Use of Name
+; Users will not use the name of the Virginia Polytechnic Institute and State University nor
+; any adaptation thereof in any publicity or advertising, without the prior written consent
+; from Virginia Tech in each case.
+; Export License
+; Export of this software from the United States may require a specific license from the
+; United States Government. It is the responsibility of any person or organization
+; contemplating export to obtain such a license before exporting.
 ;
 ; MODIFICATION HISTORY:
 ; Written by Lasse Clausen, 8 Jan, 2010
@@ -124,13 +190,13 @@ endif
 for i=0, cc-1 do begin
 
 	stem_ofile = file_basename(ifiles[i], '.asc')
-	d_filename = outdir+'/'+stem_ofile+'ex_delay.asc'
+;	d_filename = outdir+'/'+stem_ofile+'ex_delay.asc'
 	i_filename = outdir+'/'+stem_ofile+'ex_imf.asc'
 
 	; open input file
 	openr, ilun, ifiles[i], /get_lun
 	; open output delay file
-	openw, olun_d, d_filename, /get_lun
+	; openw, olun_d, d_filename, /get_lun
 	; open output imf file
 	openw, olun_i, i_filename, /get_lun
 
@@ -155,26 +221,26 @@ for i=0, cc-1 do begin
 		; calculate date of de-delayed imf measurements
 		jul = julday(1, doy, year, hr, mt)
 		caldat, jul, mn, dy, yr, hr, mt, sc
-		ijul = jul - double(dt)/86400.
-		caldat, ijul, imn, idy, iyr, ihr, imt, isc
-		dhr = dt/3600L
-		dmn = (dt - dhr*3600L)/60L
+		;ijul = jul - double(dt)/86400.
+		;caldat, ijul, imn, idy, iyr, ihr, imt, isc
+		;dhr = dt/3600L
+		;dmn = (dt - dhr*3600L)/60L
 ;		dsc = (dt mod 60L)
 	
 		; print the original time with the delay in one
-		printf, olun_d, $
-			yr, mn, dy, hr, mt, sc, dhr, dmn, $
-			format='(I4,5(" ",I02)," ",I2," ",I3)'
+		;printf, olun_d, $
+		;	yr, mn, dy, hr, mt, sc, dhr, dmn, $
+		;	format='(I4,5(" ",I02)," ",I2," ",I3)'
 	
-		; and the de-delayed time with the IMF in the other file
+		; and the time with the IMF in the other file
 		printf, olun_i, $
-			iyr, imn, idy, ihr, imt, isc, bx, by, bz, $
+			yr, mn, dy, hr, mt, sc, bx, by, bz, $
 			format='(I4,5(" ",I02),3(" ",F8.2))'
 	
 	endwhile
 
 	; close input and last output file and exit
-	free_lun, olun_d
+	;free_lun, olun_d
 	free_lun, olun_i
 	free_lun, ilun
 
@@ -186,8 +252,8 @@ for i=0, cc-1 do begin
 	; let the shell do all the hard work
 	; -n sorts by string numeric value
 	; -t give the separator between fields
-	spawn, 'sort -n -t " " '+i_filename+' > '+i_filename+'.tmp'
-	file_move, i_filename+'.tmp', i_filename, /overwrite
+	;spawn, 'sort -n -t " " '+i_filename+' > '+i_filename+'.tmp'
+	;file_move, i_filename+'.tmp', i_filename, /overwrite
 
 endfor
 

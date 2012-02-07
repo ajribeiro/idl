@@ -14,8 +14,6 @@
 ;
 ; Ngates: The number of gates to calculate, usually found in rad_fit/raw_info.ngates
 ;
-; Bmsep: The separation between beams, usually found in rad_fit/raw_info.bmsep.
-;
 ; Year: Set this to the year for which to calculate the cell position.
 ; Sometimes, radar parameters change, hence you need to specify which date
 ; you are interested in.
@@ -31,7 +29,9 @@
 ;
 ; NORMAL: Set this keyword to force the folowing values: LAGRF = 1200. and SMSEP = 300.
 ;
-; LAGRF0: Some value, if set, it overrides the /NORMAL keyword.
+; BMSEP: The separation between beams, usually found in rad_fit/raw_info.bmsep.
+;
+; LAGFR0: Some value, if set, it overrides the /NORMAL keyword.
 ;
 ; SMSEP0: Some value, if set, it overrides the /NORMAL keyword.
 ;
@@ -49,20 +49,89 @@
 ;
 ; EXAMPLE:
 ;
+; COPYRIGHT:
+; Non-Commercial Purpose License
+; Copyright © November 14, 2006 by Virginia Polytechnic Institute and State University
+; All rights reserved.
+; Virginia Polytechnic Institute and State University (Virginia Tech) owns the DaViT
+; software and its associated documentation (“Software”). You should carefully read the
+; following terms and conditions before using this software. Your use of this Software
+; indicates your acceptance of this license agreement and all terms and conditions.
+; You are hereby licensed to use the Software for Non-Commercial Purpose only. Non-
+; Commercial Purpose means the use of the Software solely for research. Non-
+; Commercial Purpose excludes, without limitation, any use of the Software, as part of, or
+; in any way in connection with a product or service which is sold, offered for sale,
+; licensed, leased, loaned, or rented. Permission to use, copy, modify, and distribute this
+; compilation for Non-Commercial Purpose is hereby granted without fee, subject to the
+; following terms of this license.
+; Copies and Modifications
+; You must include the above copyright notice and this license on any copy or modification
+; of this compilation. Each time you redistribute this Software, the recipient automatically
+; receives a license to copy, distribute or modify the Software subject to these terms and
+; conditions. You may not impose any further restrictions on this Software or any
+; derivative works beyond those restrictions herein.
+; You agree to use your best efforts to provide Virginia Polytechnic Institute and State
+; University (Virginia Tech) with any modifications containing improvements or
+; extensions and hereby grant Virginia Tech a perpetual, royalty-free license to use and
+; distribute such modifications under the terms of this license. You agree to notify
+; Virginia Tech of any inquiries you have for commercial use of the Software and/or its
+; modifications and further agree to negotiate in good faith with Virginia Tech to license
+; your modifications for commercial purposes. Notices, modifications, and questions may
+; be directed by e-mail to Stephen Cammer at cammer@vbi.vt.edu.
+; Commercial Use
+; If you desire to use the software for profit-making or commercial purposes, you agree to
+; negotiate in good faith a license with Virginia Tech prior to such profit-making or
+; commercial use. Virginia Tech shall have no obligation to grant such license to you, and
+; may grant exclusive or non-exclusive licenses to others. You may contact Stephen
+; Cammer at email address cammer@vbi.vt.edu to discuss commercial use.
+; Governing Law
+; This agreement shall be governed by the laws of the Commonwealth of Virginia.
+; Disclaimer of Warranty
+; Because this software is licensed free of charge, there is no warranty for the program.
+; Virginia Tech makes no warranty or representation that the operation of the software in
+; this compilation will be error-free, and Virginia Tech is under no obligation to provide
+; any services, by way of maintenance, update, or otherwise.
+; THIS SOFTWARE AND THE ACCOMPANYING FILES ARE LICENSED “AS IS”
+; AND WITHOUT WARRANTIES AS TO PERFORMANCE OR
+; MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED
+; OR IMPLIED. NO WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS
+; OFFERED. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF
+; THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE,
+; YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
+; CORRECTION.
+; Limitation of Liability
+; IN NO EVENT WILL VIRGINIA TECH, OR ANY OTHER PARTY WHO MAY
+; MODIFY AND/OR REDISTRIBUTE THE PRORAM AS PERMITTED ABOVE, BE
+; LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
+; INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+; INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS
+; OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED
+; BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE
+; WITH ANY OTHER PROGRAMS), EVEN IF VIRGINIA TECH OR OTHER PARTY
+; HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+; Use of Name
+; Users will not use the name of the Virginia Polytechnic Institute and State University nor
+; any adaptation thereof in any publicity or advertising, without the prior written consent
+; from Virginia Tech in each case.
+; Export License
+; Export of this software from the United States may require a specific license from the
+; United States Government. It is the responsibility of any person or organization
+; contemplating export to obtain such a license before exporting.
+;
 ; MODIFICATION HISTORY:
 ; Based on Steve Milan's DEFINE_BEAMS.
 ; Written by Lasse Clausen, Nov, 24 2009
 ;-
-pro rad_define_beams, id, nbeams, ngates, bmsep, year, yrsec, $
-	coords=coords, height=height, $
+pro rad_define_beams, id, nbeams, ngates, year, yrsec, $
+	coords=coords, height=height, bmsep=bmsep, $
 	normal=normal, silent=silent, lagfr0=lagfr0, smsep0=smsep0, $
 	fov_loc_full=fov_loc_full, fov_loc_center=fov_loc_center
 
 common radarinfo
 ;common rad_data_blk
 
-if n_params() lt 6 then begin
-	prinfo, 'Must give radar id, nbeams and ngates, bmsep, year and yrsec.'
+if n_params() ne 5 then begin
+	prinfo, 'Must give radar id, nbeams and ngates, year and yrsec.'
 	return
 endif
 
@@ -103,6 +172,7 @@ endif
 IF KEYWORD_SET(normal) THEN BEGIN
 	_lagfr0 = 1200.
 	_smsep0 = 300.
+	_bmsep = 3.24
 ENDIF
 
 ; explicitly setting the keyword overrides /NORMAL
@@ -112,8 +182,13 @@ if keyword_set(lagfr0) then $
 if keyword_set(smsep0) then $
 	_smsep0 = smsep0
 
-fov_loc_center = make_array(2, nbeams+1, ngates+1)
-fov_loc_full = make_array(2, 4, nbeams+1, ngates+1)
+if keyword_set(bmsep) then $
+	_bmsep = bmsep
+
+; actually, fov_loc_center should only have ngates elements, but we make one more
+; so that rad_fit_plot_rti works properly
+fov_loc_center = make_array(2, nbeams, ngates+1)
+fov_loc_full   = make_array(2, 4, nbeams+1, ngates+1)
 	
 ; Determine range
 IF cflag EQ 0 THEN BEGIN
@@ -121,9 +196,17 @@ IF cflag EQ 0 THEN BEGIN
 	rxrise  = 100.
 	b = FINDGEN(nbeams+1)-0.5
 	g = FINDGEN(ngates+1)-0.5
-	FOR m=0,nbeams DO BEGIN
+  s    = TimeYrsecToYMDHMS(year,mo,dy,hr,mt,sc,yrsec)
+  rid  = RadarGetRadar(network,id)
+  site = RadarYMDHMSGetSite(rid,year,mo,dy,hr,mt,sc)
+	if size(site, /type) eq 3 then begin
+		prinfo, 'Cannot find site at given date: '+rid.name+' at '+strjoin(strtrim(string([year,mo,dy,hr,mt,sc]),2),'-')
+		return
+	endif
+        ;Changed nbeams to nbeams-1 to avoid subscripting error /30NOV2011//NAF
+	FOR m=0,nbeams-1 DO BEGIN
 		FOR n=0,ngates DO BEGIN
-			ang   = (b[m]-3.5)*bmsep*!dtor
+			ang   = (b[m] - site.maxbeam/2.)*site.bmsep*!dtor
 			range = (_lagfr0 - rxrise + n*_smsep0)*0.150
 			IF rad_get_scatterflag() EQ 1 THEN BEGIN
 				IF range GT 600.0 THEN BEGIN
@@ -133,38 +216,69 @@ IF cflag EQ 0 THEN BEGIN
 					distance=0.0
 			ENDIF ELSE $
 			distance=range
-			fov_loc_center[0,m,n] = range;*SIN(ang)
+			if m lt nbeams then $
+				fov_loc_center[0,m,n] = range;*SIN(ang)
 			fov_loc_center[1,m,n] = range*COS(ang)
 		ENDFOR
 	ENDFOR
 ENDIF
 
+; RADARPOS(CENTER, BCRD, RCRD, SITE, FRANG, RSEP, RXRISE, HEIGHT, RHO, LAT, LNG)
 ; Determine latitude and longitude positions	
 IF cflag EQ 1 OR cflag EQ 2 THEN BEGIN
 	; Use rbpos library - check that not SPEAR radar
 	IF id NE 128 THEN BEGIN
-		FOR m=0,nbeams DO BEGIN
-			if arg_present(fov_loc_full) then begin
-				pos = rbpos(indgen(ngates+1)+1, beam=m, lagfr=_lagfr0, smsep=_smsep0, $
-					height=height, station=id, geo=(cflag EQ 1), year=year, yrsec=yrsec)
-				fov_loc_full[*,0,m,*] = pos[0:1,0,0,*]
-				fov_loc_full[*,1,m,*] = pos[0:1,1,0,*]
-				fov_loc_full[*,2,m,*] = pos[0:1,1,1,*]
-				fov_loc_full[*,3,m,*] = pos[0:1,0,1,*]
-			endif
-			if arg_present(fov_loc_center) then begin
-				pos = rbpos(indgen(ngates+1)+1, beam=m, lagfr=_lagfr0, smsep=_smsep0, $
-					height=height, station=id, geo=(cflag EQ 1), /center, year=year, yrsec=yrsec)
-				fov_loc_center[0,m,*] = pos[0,*]
-				fov_loc_center[1,m,*] = pos[1,*]
-			endif
-		ENDFOR
+  	s    = TimeYrsecToYMDHMS(year,mo,dy,hr,mt,sc,yrsec)
+  	rid  = RadarGetRadar(network,id)
+  	site = RadarYMDHMSGetSite(rid,year,mo,dy,hr,mt,sc)
+		if size(site, /type) eq 3 then begin
+			prinfo, 'Cannot find site at given date: '+rid.name+' at '+strjoin(strtrim(string([year,mo,dy,hr,mt,sc]),2),'-')
+			return
+		endif
+
+		if keyword_set(bmsep) then $
+			site.bmsep = _bmsep
+
+		tg = indgen(ngates+1)
+		tb = indgen(nbeams)
+		bmarr = rebin(tb, nbeams, ngates+1)
+		rgarr = transpose(rebin(tg, ngates+1, nbeams))
+		pos = radarPos(1, bmarr, rgarr, site, _lagfr0*.15, _smsep0*.15, site.recrise, height, rho, lat, lon)
+		if cflag eq 2 then begin
+			s = AACGMConvert(lat, lon, replicate(height,ngates+1,nbeams), mlat, mlon, mrho)
+			lat = mlat
+			lon = mlon
+			rho = mrho
+		endif
+		fov_loc_center[0,*,*] = lat
+		fov_loc_center[1,*,*] = lon
+
+		tg = indgen(ngates+2)
+		tb = indgen(nbeams+2)
+		bmarr = rebin(tb, nbeams+2, ngates+2)
+		rgarr = transpose(rebin(tg, ngates+2, nbeams+2))
+		pos = radarPos(0, bmarr, rgarr, site, _lagfr0*.15, _smsep0*.15, site.recrise, height, rho, lat, lon)
+		if cflag eq 2 then begin
+			s = AACGMConvert(lat, lon, replicate(height,ngates+2,nbeams+2), mlat, mlon, mrho)
+			lat = mlat
+			lon = mlon
+			rho = mrho
+		endif
+		fov_loc_full[0,0,*,*] = lat[0:nbeams,0:ngates]
+		fov_loc_full[0,1,*,*] = lat[1:nbeams+1,0:ngates]
+		fov_loc_full[0,2,*,*] = lat[1:nbeams+1,1:ngates+1]
+		fov_loc_full[0,3,*,*] = lat[0:nbeams,1:ngates+1]
+		fov_loc_full[1,0,*,*] = lon[0:nbeams,0:ngates]
+		fov_loc_full[1,1,*,*] = lon[1:nbeams+1,0:ngates]
+		fov_loc_full[1,2,*,*] = lon[1:nbeams+1,1:ngates+1]
+		fov_loc_full[1,3,*,*] = lon[0:nbeams,1:ngates+1]
+
 	ENDIF
 ENDIF
 
 ; Determine gate numbers
 IF cflag EQ 3 THEN BEGIN
-	FOR m=0,nbeams DO $
+	FOR m=0,nbeams-1 DO $
 		fov_loc_center[0,m,0:ngates] = FINDGEN(ngates+1)
 ENDIF
 

@@ -60,6 +60,8 @@
 ;
 ; PSYM: Set this keyword to change the symbol used for plotting.
 ;
+; SYMSIZE: Set this keyword to change the plotting symbol size.
+;
 ; XSTYLE: Set this keyword to change the style of the x axis.
 ;
 ; YSTYLE: Set this keyword to change the style of the y axis.
@@ -95,6 +97,8 @@
 ; if you want to override the internal
 ; positioning calculations.
 ;
+; EXCLUDE: Set this keyword to exclude from plotting data with outside of a specified range.  Keyword should be a two-element vector in the form of EXCLUDE = [minVal, maxVal].  If this keyword is not set, the default value of [-10000, 10000] will be used.
+;
 ; FIRST: Set this keyword to indicate that this panel is the first panel in
 ; a ROW of plots. That will force Y axis labels.
 ;
@@ -104,8 +108,79 @@
 ; WITH_INFO: Set this keyword to leave some extra space on the top for plotting noise
 ; and frequency info panels.
 ;
+; ITERPOLATE: Set this keyword to the desired time resolution in seconds of linear interpolation to be performed on the data.  IDL's INTERPOL() function is used.
+;
 ; EXAMPLE: 
 ; 
+; COPYRIGHT:
+; Non-Commercial Purpose License
+; Copyright © November 14, 2006 by Virginia Polytechnic Institute and State University
+; All rights reserved.
+; Virginia Polytechnic Institute and State University (Virginia Tech) owns the DaViT
+; software and its associated documentation (“Software”). You should carefully read the
+; following terms and conditions before using this software. Your use of this Software
+; indicates your acceptance of this license agreement and all terms and conditions.
+; You are hereby licensed to use the Software for Non-Commercial Purpose only. Non-
+; Commercial Purpose means the use of the Software solely for research. Non-
+; Commercial Purpose excludes, without limitation, any use of the Software, as part of, or
+; in any way in connection with a product or service which is sold, offered for sale,
+; licensed, leased, loaned, or rented. Permission to use, copy, modify, and distribute this
+; compilation for Non-Commercial Purpose is hereby granted without fee, subject to the
+; following terms of this license.
+; Copies and Modifications
+; You must include the above copyright notice and this license on any copy or modification
+; of this compilation. Each time you redistribute this Software, the recipient automatically
+; receives a license to copy, distribute or modify the Software subject to these terms and
+; conditions. You may not impose any further restrictions on this Software or any
+; derivative works beyond those restrictions herein.
+; You agree to use your best efforts to provide Virginia Polytechnic Institute and State
+; University (Virginia Tech) with any modifications containing improvements or
+; extensions and hereby grant Virginia Tech a perpetual, royalty-free license to use and
+; distribute such modifications under the terms of this license. You agree to notify
+; Virginia Tech of any inquiries you have for commercial use of the Software and/or its
+; modifications and further agree to negotiate in good faith with Virginia Tech to license
+; your modifications for commercial purposes. Notices, modifications, and questions may
+; be directed by e-mail to Stephen Cammer at cammer@vbi.vt.edu.
+; Commercial Use
+; If you desire to use the software for profit-making or commercial purposes, you agree to
+; negotiate in good faith a license with Virginia Tech prior to such profit-making or
+; commercial use. Virginia Tech shall have no obligation to grant such license to you, and
+; may grant exclusive or non-exclusive licenses to others. You may contact Stephen
+; Cammer at email address cammer@vbi.vt.edu to discuss commercial use.
+; Governing Law
+; This agreement shall be governed by the laws of the Commonwealth of Virginia.
+; Disclaimer of Warranty
+; Because this software is licensed free of charge, there is no warranty for the program.
+; Virginia Tech makes no warranty or representation that the operation of the software in
+; this compilation will be error-free, and Virginia Tech is under no obligation to provide
+; any services, by way of maintenance, update, or otherwise.
+; THIS SOFTWARE AND THE ACCOMPANYING FILES ARE LICENSED “AS IS”
+; AND WITHOUT WARRANTIES AS TO PERFORMANCE OR
+; MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED
+; OR IMPLIED. NO WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS
+; OFFERED. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF
+; THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE,
+; YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
+; CORRECTION.
+; Limitation of Liability
+; IN NO EVENT WILL VIRGINIA TECH, OR ANY OTHER PARTY WHO MAY
+; MODIFY AND/OR REDISTRIBUTE THE PRORAM AS PERMITTED ABOVE, BE
+; LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
+; INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+; INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS
+; OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED
+; BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE
+; WITH ANY OTHER PROGRAMS), EVEN IF VIRGINIA TECH OR OTHER PARTY
+; HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+; Use of Name
+; Users will not use the name of the Virginia Polytechnic Institute and State University nor
+; any adaptation thereof in any publicity or advertising, without the prior written consent
+; from Virginia Tech in each case.
+; Export License
+; Export of this software from the United States may require a specific license from the
+; United States Government. It is the responsibility of any person or organization
+; contemplating export to obtain such a license before exporting.
+;
 ; MODIFICATION HISTORY: 
 ; Written by: Lasse Clausen, 2009.
 ;-
@@ -115,7 +190,7 @@ pro rad_fit_plot_tsr_panel, xmaps, ymaps, xmap, ymap, $
 	channel=channel, scan_id=scan_id, $
 	freq_band=freq_band, coords=coords, yrange=yrange, $
 	silent=silent, bar=bar, $
-	charthick=charthick, charsize=charsize, psym=psym, $ 
+	charthick=charthick, charsize=charsize, psym=psym, symsize=symsize, $ 
 	xstyle=xstyle, ystyle=ystyle, xtitle=xtitle, ytitle=ytitle, $
 	xticks=xticks, xminor=xminor, yticks=yticks, yminor=yminor, $
 	linestyle=linestyle, linecolor=linecolor, linethick=linethick, $
@@ -123,7 +198,9 @@ pro rad_fit_plot_tsr_panel, xmaps, ymaps, xmap, ymap, $
 	xtickname=xtickname, ytickname=ytickname, $
 	position=position, exclude=exclude, $
 	first=first, last=last, with_info=with_info, no_title=no_title, $
-	title=title
+	title=title, $
+        interpolate = interpolate, gaps=gaps,      $
+	xtimeseries=xtimeseries, ytimeseries=ytimeseries
 
 common rad_data_blk
 
@@ -233,18 +310,23 @@ if n_elements(channel) eq 0 and scan_id eq -1 then begin
 	channel = (*rad_fit_info[data_index]).channels[0]
 endif
 
-if ~keyword_set(yrange) then begin
-	if strcmp(get_parameter(), param) then $
-		yrange = get_scale() $
-	else $
-		yrange = get_default_range(param)
-endif
+;Turned off to allow PLOT to automatically determine YRANGE unless explicitly
+;set. //NAF 25JUL2011
+;if ~keyword_set(yrange) then begin
+;	if strcmp(get_parameter(), param) then $
+;		yrange = get_scale() $
+;	else $
+;		yrange = get_default_range(param)
+;endif
 
-if ~keyword_set(xstyle) then $
+if N_ELEMENTS(xstyle) EQ 0 then $
 	xstyle = 1
 
-if ~keyword_set(ystyle) then $
+if N_ELEMENTS(ystyle) EQ 0 then $
 	ystyle = 1
+
+if N_ELEMENTS(psym) EQ 0 then $
+	psym = -4
 
 if ~keyword_set(charsize) then $
 	charsize = get_charsize(xmaps, ymaps)
@@ -253,7 +335,7 @@ if ~keyword_set(coords) then $
 	coords = get_coordinates()
 
 if ~keyword_set(linethick) then $
-	linethick = 1.
+	linethick = !p.thick
 
 if ~keyword_set(linecolor) then $
 	linecolor = get_foreground()
@@ -361,17 +443,17 @@ endif
 
 if keyword_set(avg_gates) then begin
 	tydata = ydata[beam_inds, gate[0]:gate[1]]
-	inds = where(tydata ge exclude[1] or tydata le exclude[0], nc, ncomplement=cc)
-	if cc eq 0 then begin
-		prinfo, 'No valid data found for averaging.'
-		return
-	endif
-	if nc gt 0 then $
-		tydata[inds] = !values.f_nan
-	ydata = total(tydata, 2, /nan)/(total((tydata lt exclude[1] and tydata gt exclude[0]), 2) > 1.)
+	ydata = fltarr(nbeam_inds)
+	for b=0, nbeam_inds-1 do begin
+		inds = where(tydata[b,*] lt exclude[1] and tydata[b,*] gt exclude[0], nc)
+		if nc gt 0 then begin
+			ydata[b] = median(tydata[b,inds])
+		endif else $
+			ydata[b] = 10000.
+	endfor
 endif else $
 	ydata = reform(ydata[beam_inds, gate[0]])
-;stop
+
 
 ninds = where(ydata eq 10000., nc, ncomplement=gc)
 if gc eq 0L then begin
@@ -403,9 +485,16 @@ if ty and ~keyword_set(first) then begin
 	if ~keyword_set(ytickname) then $
 		_ytickname = replicate(' ', 60)
 endif
-	
+
+IF KEYWORD_SET(interpolate) THEN BEGIN
+    intData     = INTERPOLATOR({time:xdata, data:ydata}, interpolate, GAPS=gaps)
+    xdata       = intData.time
+    ydata       = intData.data
+ENDIF
+
 ; set up coordinate system for plot
-plot, [0,0], /nodata, position=position, $
+;plot, [0,0], /nodata, position=position, $
+plot, xdata,ydata, /nodata, position=position, $
 	charthick=charthick, charsize=charsize, $ 
 	xstyle=xstyle, ystyle=ystyle, xtitle=_xtitle, ytitle=_ytitle, $
 	xticks=xticks, xminor=_xminor, yticks=yticks, yminor=yminor, $
@@ -416,10 +505,13 @@ plot, [0,0], /nodata, position=position, $
 
 ; overplot data
 oplot, xdata, ydata, $
-	thick=linethick, color=linecolor, linestyle=linestyle, psym=psym, min_value=exclude[0], max_value=exclude[1]
+	thick=linethick, color=linecolor, linestyle=linestyle, psym=psym, symsize=symsize,min_value=exclude[0], max_value=exclude[1]
 
 ; returned the actually used scan_id
 if scan_id eq -1 then $
 	scan_id = (*rad_fit_info[data_index]).scan_ids[(channel-1) > 0]
 
+; return time series for other use
+xtimeseries = xdata
+ytimeseries = ydata
 end

@@ -1,4 +1,20 @@
-function rad_map_eval_grad_vecs, pos, coeffs, latmin, order
+function rad_map_eval_grad_vecs, pos, coeffs, latmin, order, e_field=e_field
+
+e_field = rad_map_eval_efield(pos, coeffs, latmin, order)
+
+theta = (90.0 - pos[0,*])*!dtor
+Re = !re*1000.
+Altitude = 300.0*1000.0
+bpolar = -.62e-4
+
+bmag = bpolar*(1.0-3.0*Altitude/Re)*sqrt(3.0*cos(theta)^2+1.0)/2.0
+vel = e_field
+vel[0,*] =  e_field[1,*]/bmag
+vel[1,*] = -e_field[0,*]/bmag
+
+return, vel
+;-----------------------------------------------------
+; this code now lives in RAD_MAP_EVAL_EFIELD
 
 lmax = order
 theta = (90.0 - pos[0,*])*!dtor
@@ -8,10 +24,6 @@ theta_prime = norm_theta(theta, thetamax, alpha=alpha)
 x = cos(theta_prime)
 plm = eval_legendre(order, x)
 phi = pos[1,*]*!dtor
-
-Re = !re*1000.
-Altitude = 300.0*1000.0
-bpolar = -.62e-4
 
 n = n_elements(theta)
 kmax = index_legendre(Lmax, Lmax, /dbl)

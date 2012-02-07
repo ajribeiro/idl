@@ -104,6 +104,75 @@
 ;
 ; EXAMPLE: 
 ; 
+; COPYRIGHT:
+; Non-Commercial Purpose License
+; Copyright © November 14, 2006 by Virginia Polytechnic Institute and State University
+; All rights reserved.
+; Virginia Polytechnic Institute and State University (Virginia Tech) owns the DaViT
+; software and its associated documentation (“Software”). You should carefully read the
+; following terms and conditions before using this software. Your use of this Software
+; indicates your acceptance of this license agreement and all terms and conditions.
+; You are hereby licensed to use the Software for Non-Commercial Purpose only. Non-
+; Commercial Purpose means the use of the Software solely for research. Non-
+; Commercial Purpose excludes, without limitation, any use of the Software, as part of, or
+; in any way in connection with a product or service which is sold, offered for sale,
+; licensed, leased, loaned, or rented. Permission to use, copy, modify, and distribute this
+; compilation for Non-Commercial Purpose is hereby granted without fee, subject to the
+; following terms of this license.
+; Copies and Modifications
+; You must include the above copyright notice and this license on any copy or modification
+; of this compilation. Each time you redistribute this Software, the recipient automatically
+; receives a license to copy, distribute or modify the Software subject to these terms and
+; conditions. You may not impose any further restrictions on this Software or any
+; derivative works beyond those restrictions herein.
+; You agree to use your best efforts to provide Virginia Polytechnic Institute and State
+; University (Virginia Tech) with any modifications containing improvements or
+; extensions and hereby grant Virginia Tech a perpetual, royalty-free license to use and
+; distribute such modifications under the terms of this license. You agree to notify
+; Virginia Tech of any inquiries you have for commercial use of the Software and/or its
+; modifications and further agree to negotiate in good faith with Virginia Tech to license
+; your modifications for commercial purposes. Notices, modifications, and questions may
+; be directed by e-mail to Stephen Cammer at cammer@vbi.vt.edu.
+; Commercial Use
+; If you desire to use the software for profit-making or commercial purposes, you agree to
+; negotiate in good faith a license with Virginia Tech prior to such profit-making or
+; commercial use. Virginia Tech shall have no obligation to grant such license to you, and
+; may grant exclusive or non-exclusive licenses to others. You may contact Stephen
+; Cammer at email address cammer@vbi.vt.edu to discuss commercial use.
+; Governing Law
+; This agreement shall be governed by the laws of the Commonwealth of Virginia.
+; Disclaimer of Warranty
+; Because this software is licensed free of charge, there is no warranty for the program.
+; Virginia Tech makes no warranty or representation that the operation of the software in
+; this compilation will be error-free, and Virginia Tech is under no obligation to provide
+; any services, by way of maintenance, update, or otherwise.
+; THIS SOFTWARE AND THE ACCOMPANYING FILES ARE LICENSED “AS IS”
+; AND WITHOUT WARRANTIES AS TO PERFORMANCE OR
+; MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED
+; OR IMPLIED. NO WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS
+; OFFERED. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF
+; THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE,
+; YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
+; CORRECTION.
+; Limitation of Liability
+; IN NO EVENT WILL VIRGINIA TECH, OR ANY OTHER PARTY WHO MAY
+; MODIFY AND/OR REDISTRIBUTE THE PRORAM AS PERMITTED ABOVE, BE
+; LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
+; INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+; INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS
+; OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED
+; BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE
+; WITH ANY OTHER PROGRAMS), EVEN IF VIRGINIA TECH OR OTHER PARTY
+; HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+; Use of Name
+; Users will not use the name of the Virginia Polytechnic Institute and State University nor
+; any adaptation thereof in any publicity or advertising, without the prior written consent
+; from Virginia Tech in each case.
+; Export License
+; Export of this software from the United States may require a specific license from the
+; United States Government. It is the responsibility of any person or organization
+; contemplating export to obtain such a license before exporting.
+;
 ; MODIFICATION HISTORY: 
 ; Written by: Lasse Clausen, 2009.
 ;-
@@ -120,7 +189,8 @@ pro rad_fit_plot_noise_panel, xmaps, ymaps, xmap, ymap, $
 	xtickname=xtickname, ytickname=ytickname, $
 	position=position, panel_position=panel_position, $
 	last=last, first=first, with_info=with_info, info=info, no_title=no_title, $
-	title=title
+	title=title, horizontal_ytitle=horizontal_ytitle, rightyaxis=rightyaxis, $
+	search=search, sky=sky
 
 common rad_data_blk
 
@@ -128,6 +198,14 @@ common rad_data_blk
 data_index = rad_fit_get_data_index()
 if data_index eq -1 then $
 	return
+
+if (*rad_fit_info[data_index]).nrecs eq 0L then begin
+	if ~keyword_set(silent) then begin
+		prinfo, 'No data in index '+string(data_index)
+		rad_fit_info
+	endif
+	return
+endif
 
 if n_params() lt 4 then begin
 	if ~keyword_set(silent) then $
@@ -168,6 +246,9 @@ if ~keyword_set(time) then $
 sfjul, date, time, sjul, fjul, long=long
 xrange = [sjul, fjul]
 
+if ~keyword_set(search) and ~keyword_set(sky) then $
+	sky = 1
+
 if n_elements(xtitle) eq 0 then $
 	_xtitle = 'Time UT' $
 else $
@@ -184,27 +265,38 @@ else $
 	_xtickname = xtickname
 
 if n_elements(ytitle) eq 0 then $
-	_ytitle = 'Noise [dB]' $
+	_ytitle = ( keyword_set(search) ? 'N.Search' : 'N.Sky' ) $
 else $
 	_ytitle = ytitle
+
+if n_elements(yticks) eq 0 then begin
+	if keyword_set(info) then $
+		_yticks = 1 $
+	else $
+		_yticks = 0
+endif else $
+	_yticks = yticks
 
 if n_elements(ytickformat) eq 0 then $
 	_ytickformat = '' $
 else $
 	_ytickformat = ytickformat
 
-if n_elements(ytickname) eq 0 then $
-	_ytickname = '' $
-else $
+if n_elements(ytickname) eq 0 then begin
+	if keyword_set(info) then $
+		_ytickname = ['10^0','10^5'] $
+	else $
+		_ytickname = ''
+endif else $
 	_ytickname = ytickname
 
 if ~keyword_set(position) then begin
 	if keyword_set(info) then begin
 		position = define_panel(xmaps, ymaps, xmap, ymap, bar=bar, /with_info, no_title=no_title)
-		position = [position[0], position[3]+0.08, $
-			position[2], position[3]+0.12]
+		position = [position[0], position[3]+0.1, $
+			position[2], position[3]+0.14]
 	endif else if keyword_set(panel_position) then $
-		position = [panel_position[0], panel_position[3]+0.08, panel_position[2], panel_position[3]+0.12] $
+		position = [panel_position[0], panel_position[3]+0.1, panel_position[2], panel_position[3]+0.14] $
 	else $
 		position = define_panel(xmaps, ymaps, xmap, ymap, bar=bar, with_info=with_info, no_title=no_title)
 endif
@@ -231,10 +323,10 @@ if ty and ~keyword_set(first) then begin
 endif
 
 if ~keyword_set(xstyle) then $
-	xstyle = 1
+	xstyle = ( keyword_set(rightyaxis) ? 5 : 1 )
 
 if ~keyword_set(ystyle) then $
-	ystyle = 1
+	ystyle = ( keyword_set(rightyaxis) ? 5 : 1 )
 
 if ~keyword_set(yrange) then $
 	yrange = get_default_range('noise')
@@ -256,13 +348,15 @@ if keyword_set(xminor) then $
 
 ; set up coordinate system for plot
 plot, [0,0], /nodata, position=position, $
-	charthick=charthick, charsize=(keyword_set(info) ? .6 : 1.)*charsize, $ 
-	xstyle=xstyle, ystyle=ystyle, xtitle=_xtitle, ytitle=_ytitle, $
-	xticks=xticks, xminor=_xminor, yticks=yticks, yminor=yminor, $
+	charthick=charthick, charsize=charsize, $ 
+	xstyle=xstyle, ystyle=ystyle, xtitle=_xtitle, $
+	ytitle=( keyword_set(horizontal_ytitle) ? ' ' : _ytitle ), $
+	xticks=xticks, xminor=_xminor, yticks=_yticks, yminor=yminor, $
 	xtickformat=_xtickformat, ytickformat=_ytickformat, $
 	xtickname=_xtickname, ytickname=_ytickname, $
-	xrange=xrange, yrange=yrange, $
-	color=get_foreground()
+	xrange=xrange, yrange=yrange, /ylog, $
+	color=get_foreground(), xticklen=-!p.ticklen, yticklen=-!p.ticklen, $
+	title=title
 
 ;if keyword_set(info) then $
 ;	xyouts, position[0]-.05*(position[2]-position[0]), $
@@ -271,12 +365,15 @@ plot, [0,0], /nodata, position=position, $
 
 ; get data
 xtag = 'juls'
-ytag = 'noise'
+if keyword_set(search) then $
+	ytag = 'noise.search' $
+else $
+	ytag = 'noise.sky'
 if ~tag_exists((*rad_fit_data[data_index]), xtag) then begin
 	prinfo, 'Parameter '+xtag+' does not exist in RAD_FIT_DATA.'
 	return
 endif
-if ~tag_exists((*rad_fit_data[data_index]), ytag) then begin
+if ~tag_exists((*rad_fit_data[data_index]), (strsplit(ytag,'.',/extr))[0]) then begin
 	prinfo, 'Parameter '+ytag+' does not exist in RAD_FIT_DATA.'
 	return
 endif
@@ -342,7 +439,60 @@ endif else if keyword_set(scan_id) then begin
 endif
 
 ; overplot data
-oplot, xdata[beam_inds], alog10(ydata[beam_inds]), $
+
+; plot beginning
+xs = xdata[ [beam_inds[0],beam_inds[0],beam_inds[1]] ]
+ys = [0.1,ydata[beam_inds[0]],ydata[beam_inds[0]]]
+oplot, xs, ys, $
 	thick=linethick, color=linecolor, linestyle=linestyle, psym=psym
+
+for i=1L, nbeam_inds-2L do begin
+	if (xdata[beam_inds[i+1]] - xdata[beam_inds[i]])*1440.d gt 4. then begin
+		xs = xdata[ [beam_inds[i],beam_inds[i],beam_inds[i],beam_inds[i]] ] + [0.d, 0.d, 4.d/1440.d, 4.d/1440.d]
+		ys = [ydata[beam_inds[i-1]],ydata[beam_inds[i]],ydata[beam_inds[i]],0.1]
+		oplot, xs, ys, $
+			thick=linethick, color=linecolor, linestyle=linestyle, psym=psym
+		if i lt nbeam_inds-2L then begin
+			i += 1
+			xs = xdata[ [beam_inds[i],beam_inds[i],beam_inds[i+1]] ]
+			ys = [0.1,ydata[beam_inds[i]],ydata[beam_inds[i]]]
+			oplot, xs, ys, $
+				thick=linethick, color=linecolor, linestyle=linestyle, psym=psym
+		endif
+	endif else begin
+		xs = xdata[ [beam_inds[i],beam_inds[i],beam_inds[i+1]] ]
+		ys = [ydata[beam_inds[i-1]],ydata[beam_inds[i]],ydata[beam_inds[i]]]
+		oplot, xs, ys, $
+			thick=linethick, color=linecolor, linestyle=linestyle, psym=psym
+	endelse
+endfor
+
+; plot end
+oplot, [xdata[beam_inds[i]], xdata[beam_inds[i]]], [ydata[beam_inds[i]], 0.1], $
+	thick=linethick, color=linecolor, linestyle=linestyle, psym=psym
+
+if keyword_set(rightyaxis) then $
+	axis, /yaxis, ystyle=1, yrange=10.^!y.crange, $
+	charthick=charthick, charsize=charsize, ytitle=( keyword_set(horizontal_ytitle) ? ' ' : _ytitle ), $
+	yticks=_yticks, yminor=yminor, ytickformat=_ytickformat, ytickname=_ytickname, $
+	color=get_foreground(), yticklen=-!p.ticklen
+
+if keyword_set(horizontal_ytitle) and ( ( ystyle and 4) eq 0 or keyword_set(rightyaxis) ) then begin
+	if keyword_set(rightyaxis) then begin
+		align = 0
+		xpos = position[2] + 0.09*(position[2]-position[0])
+	endif else begin
+		align = 1
+		xpos = position[0] - 0.09*(position[2]-position[0])
+	endelse
+	if strpos(_ytitle, '!C') ne -1 then $
+		loff = .02*charsize $
+	else $
+		loff = 0.
+	ypos = (position[1]+position[3])/2. - (keyword_set(info) ? 0.2*(position[3]-position[1]) : 0.) + loff
+	xyouts, xpos, ypos, _ytitle, /norm, charthick=charthick, charsize=charsize, width=strwidth, align=align
+	plots, xpos+(1.-2.*align)*[strwidth/4., 3./4.*strwidth], ypos-0.01-1.2*loff, /norm, $
+		thick=linethick, color=linecolor, linestyle=linestyle, psym=psym
+endif
 
 end

@@ -71,6 +71,10 @@
 ; if you want to override the internal
 ; positioning calculations.
 ;
+; PANEL_POSITION: Set this keyword to a 4-element vector of normalized coordinates of
+; the panel above which the noise panel will be placed. Only takes effect when the
+; INFO keyword is set.
+;
 ; FIRST: Set this keyword to indicate that this panel is the first panel in
 ; a ROW of plots. That will force Y axis labels.
 ;
@@ -82,21 +86,87 @@
 ;
 ; EXAMPLE: 
 ; 
+; COPYRIGHT:
+; Non-Commercial Purpose License
+; Copyright © November 14, 2006 by Virginia Polytechnic Institute and State University
+; All rights reserved.
+; Virginia Polytechnic Institute and State University (Virginia Tech) owns the DaViT
+; software and its associated documentation (“Software”). You should carefully read the
+; following terms and conditions before using this software. Your use of this Software
+; indicates your acceptance of this license agreement and all terms and conditions.
+; You are hereby licensed to use the Software for Non-Commercial Purpose only. Non-
+; Commercial Purpose means the use of the Software solely for research. Non-
+; Commercial Purpose excludes, without limitation, any use of the Software, as part of, or
+; in any way in connection with a product or service which is sold, offered for sale,
+; licensed, leased, loaned, or rented. Permission to use, copy, modify, and distribute this
+; compilation for Non-Commercial Purpose is hereby granted without fee, subject to the
+; following terms of this license.
+; Copies and Modifications
+; You must include the above copyright notice and this license on any copy or modification
+; of this compilation. Each time you redistribute this Software, the recipient automatically
+; receives a license to copy, distribute or modify the Software subject to these terms and
+; conditions. You may not impose any further restrictions on this Software or any
+; derivative works beyond those restrictions herein.
+; You agree to use your best efforts to provide Virginia Polytechnic Institute and State
+; University (Virginia Tech) with any modifications containing improvements or
+; extensions and hereby grant Virginia Tech a perpetual, royalty-free license to use and
+; distribute such modifications under the terms of this license. You agree to notify
+; Virginia Tech of any inquiries you have for commercial use of the Software and/or its
+; modifications and further agree to negotiate in good faith with Virginia Tech to license
+; your modifications for commercial purposes. Notices, modifications, and questions may
+; be directed by e-mail to Stephen Cammer at cammer@vbi.vt.edu.
+; Commercial Use
+; If you desire to use the software for profit-making or commercial purposes, you agree to
+; negotiate in good faith a license with Virginia Tech prior to such profit-making or
+; commercial use. Virginia Tech shall have no obligation to grant such license to you, and
+; may grant exclusive or non-exclusive licenses to others. You may contact Stephen
+; Cammer at email address cammer@vbi.vt.edu to discuss commercial use.
+; Governing Law
+; This agreement shall be governed by the laws of the Commonwealth of Virginia.
+; Disclaimer of Warranty
+; Because this software is licensed free of charge, there is no warranty for the program.
+; Virginia Tech makes no warranty or representation that the operation of the software in
+; this compilation will be error-free, and Virginia Tech is under no obligation to provide
+; any services, by way of maintenance, update, or otherwise.
+; THIS SOFTWARE AND THE ACCOMPANYING FILES ARE LICENSED “AS IS”
+; AND WITHOUT WARRANTIES AS TO PERFORMANCE OR
+; MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED
+; OR IMPLIED. NO WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS
+; OFFERED. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF
+; THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE,
+; YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
+; CORRECTION.
+; Limitation of Liability
+; IN NO EVENT WILL VIRGINIA TECH, OR ANY OTHER PARTY WHO MAY
+; MODIFY AND/OR REDISTRIBUTE THE PRORAM AS PERMITTED ABOVE, BE
+; LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL,
+; INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+; INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS
+; OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED
+; BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE
+; WITH ANY OTHER PROGRAMS), EVEN IF VIRGINIA TECH OR OTHER PARTY
+; HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+; Use of Name
+; Users will not use the name of the Virginia Polytechnic Institute and State University nor
+; any adaptation thereof in any publicity or advertising, without the prior written consent
+; from Virginia Tech in each case.
+; Export License
+; Export of this software from the United States may require a specific license from the
+; United States Government. It is the responsibility of any person or organization
+; contemplating export to obtain such a license before exporting.
+;
 ; MODIFICATION HISTORY: 
 ; Written by: Lasse Clausen, 2009.
 ;-
 pro rad_fit_plot_scan_id_info_panel, xmaps, ymaps, xmap, ymap, $
 	date=date, time=time, long=long, $
 	beam=beam, channel=channel, $
-	silent=silent, bar=bar, $
-	charthick=charthick, charsize=charsize, $ 
-	xtitle=xtitle, ytitle=ytitle, $
-	xticks=xticks, xminor=xminor, $
+	silent=silent, bar=bar, ytitle=ytitle, $
+	charthick=charthick, charsize=charsize, $
 	linestyle=linestyle, linecolor=linecolor, linethick=linethick, $
-	xtickformat=xtickformat, $
-	xtickname=xtickname, $
 	position=position, panel_position=panel_position, $
-	first=first, last=last, with_info=with_info, no_title=no_title
+	first=first, last=last, with_info=with_info, no_title=no_title, $
+	rightyaxis=rightyaxis, legend=legend
 
 common rad_data_blk
 
@@ -126,10 +196,10 @@ if n_params() lt 4 then begin
 endif
 if ~keyword_set(position) then begin
 	tposition = define_panel(xmaps, ymaps, xmap, ymap, bar=bar, with_info=with_info, no_title=no_title)
-	position = [tposition[0], tposition[3]+0.005, tposition[2], tposition[3]+0.025]
+	position = [tposition[0], tposition[3]+0.012, tposition[2], tposition[3]+0.048]
 endif
 if keyword_set(panel_position) then $
-	position = [panel_position[0], panel_position[3]+0.005, panel_position[2], panel_position[3]+0.02]
+	position = [panel_position[0], panel_position[3]+0.012, panel_position[2], panel_position[3]+0.048]
 
 if ~keyword_set(date) then begin
 	if ~keyword_set(silent) then $
@@ -144,50 +214,25 @@ if ~keyword_set(time) then $
 sfjul, date, time, sjul, fjul, long=long
 xrange = [sjul, fjul]
 
-if ~keyword_set(xtitle) then $
-	_xtitle = 'Time UT' $
-else $
-	_xtitle = xtitle
-
-if ~keyword_set(xtickformat) then $
-	_xtickformat = 'label_date' $
-else $
-	_xtickformat = xtickformat
-
-if ~keyword_set(xtickname) then $
-	_xtickname = '' $
-else $
-	_xtickname = xtickname
-
 if ~keyword_set(ytitle) then $
-	_ytitle = ' ' $
+	_ytitle = 'CPID' $
 else $
 	_ytitle = ytitle
 
 if n_elements(channel) eq 0 then $
 	channel = (*rad_fit_info[data_index]).channels[0]
 
-yrange = [0,1]
-
-if ~keyword_set(xstyle) then $
-	xstyle = 1
-
-ystyle = 1
+if ~keyword_set(charthick) then $
+	charthick = !p.charthick
 
 if ~keyword_set(charsize) then $
 	charsize = get_charsize(xmaps, ymaps)
 
 if ~keyword_set(linethick) then $
-	linethick = 1.
+	linethick = !p.thick
 
 if ~keyword_set(linecolor) then $
 	linecolor = get_foreground()
-
-if ~keyword_set(xticks) then $
-	xticks = get_xticks(sjul, fjul, xminor=_xminor)
-
-if keyword_set(xminor) then $
-	_xminor = xminor
 
 ; get data
 xtag = 'juls'
@@ -245,46 +290,79 @@ if nbeam_inds lt 1 then begin
 endif
 xdata = xdata[beam_inds]
 ydata = ydata[beam_inds]
-
-; check if format is sardines.
-; if yes, loose the x axis information
-; unless it is given
-fmt = get_format(sardines=sd, tokyo=ty)
-if ~keyword_set(last) then begin
-	if ~keyword_set(xtitle) then $
-		_xtitle = ' '
-	if ~keyword_set(xtickformat) then $
-		_xtickformat = ''
-	if ~keyword_set(xtickname) then $
-		_xtickname = replicate(' ', 60)
-endif
-if ty and ~keyword_set(first) then begin
-	if ~keyword_set(ytitle) then $
-		_ytitle = ' '
-endif
+ifmode = (*rad_fit_data[data_index]).ifmode[beam_inds]
 	
 ; set up coordinate system for plot
 plot, [0,0], /nodata, position=position, $
-	charthick=charthick, charsize=charsize, $ 
-	xstyle=xstyle, ystyle=ystyle, xtitle=_xtitle, ytitle=_ytitle, $
-	xticks=xticks, xminor=_xminor, yticks=1, yminor=1, $
-	xrange=xrange, yrange=[0,1], $
-	xtickformat=_xtickformat, $
-	xtickname=_xtickname, ytickname=replicate(' ', 60), $
-	color=get_foreground()
+	xstyle=5, ystyle=5, $
+	xrange=xrange, yrange=[0,60]
+
+; first color the plotting area according to
+; if/rf mode
+uifmode = uniq(ifmode)
+nnif = n_elements(uifmode)
 
 uscanids = uniq(ydata)
+for i=0, nnif-1 do begin
+  ii = where(uscanids eq uifmode[i], cc)
+  if cc eq 0L then $
+    uscanids = [uscanids, uifmode[i]]
+endfor
+uscanids = uscanids[sort(uscanids)]
 nn = n_elements(uscanids)
-oplot, replicate(xdata[0], 2), [0,1], color=linecolor, thick=linethick, linestyle=linestyle
-xyouts, xdata[0], 0.1, strtrim(string(ydata[0]),2), /data, charsize=charsize, charthick=charthick
+
+oplot, replicate(xdata[0], 2), !y.crange, color=linecolor, thick=linethick, linestyle=linestyle, /noclip
+cpname = rad_cpid_translate(ydata[0])
+ostr = (strlen(cpname) lt 2 ? '' : cpname+' ') + $
+	strtrim(string(ydata[0]),2) + $
+	( ifmode[0] eq 255 ? '' : ( ifmode[0] eq 0 ? ' RF' : ' IF' ) )
+xyouts, xdata[0]+.005*(!x.crange[1]-!x.crange[0]), 0.11*!y.crange[1], ostr, /data, charsize=charsize, $
+	charthick=charthick, color=get_foreground()
 if nn gt 1 then begin
 	for i=0L, nn-1L do begin
-		oplot, replicate(xdata[(uscanids[i]+1L) < (nbeam_inds-1L)], 2), [0,1], $
-			color=linecolor, thick=linethick, linestyle=linestyle
-		xyouts, xdata[(uscanids[i]+1L) < (nbeam_inds-1L)], 0.1+(i mod 2)*.5, $
-			strtrim(string(ydata[(uscanids[i]+1L) < (nbeam_inds-1L)]),2), /data, $
-			charsize=charsize, charthick=charthick
+		if uscanids[i] le nbeam_inds-2L then begin
+			oplot, replicate(xdata[uscanids[i]+1L], 2), !y.crange, $
+				color=linecolor, thick=linethick, linestyle=linestyle, /noclip
+			if (xdata[uscanids[i]+1L]-!x.crange[0])/(!x.crange[1]-!x.crange[0])*100. gt 85. then $
+				align = 1 $
+			else $
+				align = 0
+			cpname = rad_cpid_translate(ydata[uscanids[i]+1L])
+			ostr = (strlen(cpname) lt 2 ? '' : cpname+' ') + $
+				strtrim(string(ydata[uscanids[i]+1L]),2) + $
+				( ifmode[uscanids[i]+1L] eq 255 ? '' : ( ifmode[uscanids[i]+1L] eq 0 ? ' RF' : ' IF' ) )
+			xyouts, xdata[uscanids[i]+1L]+.005*(1.-2*align)*(!x.crange[1]-!x.crange[0]), $
+				( 0.11 + ( ( (i+1) mod 2 )*.4 ) )*!y.crange[1], $
+				ostr, /data, $
+				charsize=charsize, charthick=charthick, align=align, color=get_foreground()
+		endif
 	endfor
 endif
+
+if keyword_set(rightyaxis) then begin
+	align = 0
+	xpos = position[2] + 0.09*(position[2]-position[0])
+endif else begin
+	align = 1
+	xpos = position[0] - 0.09*(position[2]-position[0])
+endelse
+if strpos(_ytitle, '!C') ne -1 then $
+	loff = .02*charsize $
+else $
+	loff = 0.
+ypos = (position[1]+position[3])/2. - 0.2*(position[3]-position[1]) + loff
+xyouts, xpos, ypos, _ytitle, /norm, charthick=charthick, charsize=charsize, width=strwidth, align=align
+
+;fmt = get_format(tokyo=ty)
+;if ty and ~keyword_set(first) then $
+;	return
+
+;xoff = ( strcmp(!d.name, 'ps', /fold) ? 0.075 : 0.09 )
+;if keyword_set(leftyaxis) then $
+;	xpos = position[2] + (1.45+( strcmp(!d.name, 'ps', /fold) ? 0.0 : 0.2 ))*xoff*(position[2]-position[0]) $
+;else $
+;	xpos = position[0] - xoff*(position[2]-position[0])
+;ypos = position[1] + 0.2*(position[3]-position[1])
+;xyouts, xpos, ypos, _ytitle, align=1., /norm, charthick=charthick, charsize=charsize
 
 end

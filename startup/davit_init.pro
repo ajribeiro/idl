@@ -6,10 +6,14 @@ if strlen(davit_lib) eq 0 then begin & print, '%DAVIT_INIT: Environment variable
 if strpos(getenv("RAD_TMP_PATH"), "www") ne -1  or fix(getenv("DAVIT_NODISP")) eq 1 then $
 	set_plot, 'PS'
 
+; get DLM path of the RST
+rst_dlm_path = getenv("DLMPATH")
+if strlen(rst_dlm_path) eq 0 then begin & print, '%DAVIT_INIT: Environment variable DLMPATH not defined. Cannot run DaViT' & exit & endif
+
 ; set dlm path such that davit find the tsyganenko
 ; magnetic fiedl routines
 ; and cxform coordinate transformation routines
-PREF_SET, 'IDL_DLM_PATH', davit_lib+'/geopack/idl/dlm:'+davit_lib+'/cxform/cxform:<IDL_DEFAULT>', /COMMIT
+PREF_SET, 'IDL_DLM_PATH', rst_dlm_path+':'+davit_lib+'/geopack/idl/dlm:'+davit_lib+'/cxform/cxform:<IDL_DEFAULT>', /COMMIT
 
 ; force IDL to use proper array indeces
 compile_opt STRICTARRSUBS
@@ -21,7 +25,8 @@ compile_opt STRICTARRSUBS
 defsysv, '!FALSE', 0b
 defsysv, '!TRUE', ~!false
 defsysv, '!RE', 6371.
-defsysv, '!VALID_COORDS', ['gate','rang','geog','magn','mlt']
+; Defined coord system for gravity wave mapping //NAF - 15 DEC 2011
+defsysv, '!VALID_COORDS', ['gate','rang','geog','magn','mlt','gw_rang','gw_geog','gw_magn','gw_mlt']
 defsysv, '!CARISMA', 1
 defsysv, '!IMAGE', 2
 defsysv, '!GREENLAND', 3
@@ -40,11 +45,30 @@ defsysv, '!ASI_THEMIS', 21
 common user_prefs, up_format, up_mincharsize, up_windowsize, $
 	up_scatterflag, up_coordinates, up_scale, up_parameter, $
 	up_beam, up_gate, up_channel, $
-	up_editor
+	up_editor, up_sc_values
 
 ; common block for color preferences
 common color_prefs, cp_ncolors, cp_bottom, cp_black, cp_gray, cp_white, $
+	cp_red, cp_green, cp_blue, cp_cyan, cp_yellow, cp_magenta, cp_purple, cp_orange, $
 	cp_foreground, cp_background, cp_colorsteps, cp_colortable
+cp_ncolors = 0
+cp_bottom = 0
+cp_black = 0
+cp_gray = 0
+cp_white = 0
+cp_red = 0
+cp_green = 0
+cp_blue = 0
+cp_cyan = 0
+cp_yellow = 0
+cp_magenta = 0
+cp_purple = 0
+cp_orange = 0
+cp_foreground = 0
+cp_background = 0
+cp_colorsteps = 0
+cp_colortable = ''
+
 
 ; common block for PostScript preferences
 common postscript, ps_filename, ps_isopen
@@ -55,13 +79,14 @@ common rad_data_blk, rad_max_radars, rad_data_index, $
 	rad_raw_data, rad_raw_info, $
 	rad_fit_data, rad_fit_info, $
 	rad_map_data, rad_map_info, $
-	rad_grd_data, rad_grd_info
+	rad_grd_data, rad_grd_info, $
+	cpid_structure
 
 ; get maximum number of radars
-rad_max_radars = getenv("RAD_MAX_RADARS")
-if strlen(rad_max_radars) eq 0 then $
-	rad_max_radars = 5
-rad_max_radars = fix(rad_max_radars)
+;rad_max_radars = getenv("RAD_MAX_RADARS")
+;if strlen(rad_max_radars) eq 0 then $
+rad_max_radars = 20
+;rad_max_radars = fix(rad_max_radars)
 
 ; this is the index determining which
 ; of the radar data blocks to write
@@ -77,6 +102,7 @@ rad_raw_info = { $
 	id: 0, $    ; like 33
 	scan_ids: -1, $
 	channels: -1, $
+	xcf: 0b, $
 	glat: 0.0, $
 	glon: 0.0, $
 	mlat: 0.0, $
@@ -84,12 +110,12 @@ rad_raw_info = { $
 	nbeams: 16, $
 	ngates: 75, $
 	bmsep: 3.24, $
-	fov_loc_center: ptr_new(), $ ;fltarr(2, 17, 76), $ changed to pointer because different radars have different number of beams, gates
-	fov_loc_full: ptr_new(), $ ;fltarr(2, 4, 17, 76), $ changed to pointer because different radars have different number of beams, gates
-	fov_coords: '', $
+;	fov_loc_center: ptr_new(), $ ;fltarr(2, 17, 76), $ changed to pointer because different radars have different number of beams, gates
+;	fov_loc_full: ptr_new(), $ ;fltarr(2, 4, 17, 76), $ changed to pointer because different radars have different number of beams, gates
+;	fov_coords: '', $
 	parameters: ['juls','ysec','beam','scan_id','scan_mark',$
-		'channel','acf_i','acf_r',$
-		'lagfr','smsep','tfreq','noise','atten'], $
+		'channel','xcf','acf_i','acf_r',$
+		'lagfr','smsep','tfreq','noise','atten','ifmode'], $
 	nscans: 0L, $
 	dat: 0b, $
 	rawacf: 0b, $
@@ -105,6 +131,7 @@ rad_fit_info_str = { $
 	id: 0, $    ; like 33
 	scan_ids: -1, $
 	channels: -1, $
+	xcf: 0b, $
 	glat: 0.0, $
 	glon: 0.0, $
 	mlat: 0.0, $
@@ -116,8 +143,8 @@ rad_fit_info_str = { $
 ;	fov_loc_full: ptr_new(), $ ; fltarr(2, 4, 17, 76), $ changed to pointer because different radars have different number of beams, gates
 ;	fov_coords: '', $
 	parameters: ['juls','ysec','beam','scan_id','scan_mark','beam_scan',$
-		'channel','power','velocity','width',$
-		'gscatter','lagfr','smsep','tfreq','noise','atten'], $
+		'channel','xcf','lag0power','power','velocity','velocity_error','width','phi0','elevation',$
+		'gscatter','lagfr','smsep','tfreq','noise','atten','nave','ifmode'], $
 	nscans: 0L, $
 	fitex: 0b, $
 	fitacf: 0b, $
@@ -160,6 +187,22 @@ rad_grd_info_hemi = { $
 }
 rad_grd_info = replicate(rad_grd_info_hemi, 2)
 rad_grd_data = ptrarr(2)
+
+; common block for AMPERE data
+common amp_data_blk, amp_data, amp_info
+
+; info structure for AMPERE data
+amp_info_hemi = { $
+	sjul: 0.0d, $
+	fjul: 0.0d, $
+	parameters: ['sjuls','mjuls','fjuls', $
+		'dbnorth1','dbeast1','dbnorth2', 'dbeast2', $
+		'jr','p1','p2','poynting','jr_fit_pos','jr_fit_order','jr_fit_coeffs'], $
+	poynting: !false, $ ; true if poynting flux is calculated
+	nrecs: 0L $  ; number of blocks
+}
+amp_info = replicate(amp_info_hemi, 2)
+amp_data = ptrarr(2)
 
 ; common block for dst index data
 common dst_data_blk, dst_data, dst_info
@@ -245,7 +288,8 @@ omn_info = { $
 	sjul: 0.0d, $
 	fjul: 0.0d, $
 	parameters: ['juls','bx_gse','by_gse','bz_gse','by_gsm','bz_gsm','bt',$
-		'vx_gse','vy_gse','vz_gse','vt','ex_gse','ey_gse','ez_gse','ey_gsm','ez_gsm','et','beta','ma',$
+		'cone_angle', 'clock_angle', $
+		'vx_gse','vy_gse','vz_gse','vy_gsm','vz_gsm','vt','ex_gse','ey_gse','ez_gse','ey_gsm','ez_gsm','et','beta','ma',$
 		'np','pd','mag_sc','swe_sc','timeshift'], $
 	nrecs: 0L $
 }
@@ -354,7 +398,8 @@ goe_mag_info = { $
 ;, rad_f_e:z, rad_f_i:z $             ; radiation subtraction fraction 
 ;, rad_f_el:z, rad_f_il:z $           ; rad subtraction fraction low chans
 
-common dms_data_blk, dms_ssj_data, dms_ssj_info
+common dms_data_blk, dms_ssj_data, dms_ssj_info, $
+	dms_ssies_data, dms_ssies_info
 dms_ssj_info = { $
 	sjul: 0.0d, $
 	fjul: 0.0d, $
@@ -365,18 +410,59 @@ dms_ssj_info = { $
 	calibration: ptr_new(), $
 	nrecs: 0L $
 }
+dms_ssies_info = { $
+	sjul: 0.0d, $
+	fjul: 0.0d, $
+	sat: 0, $
+	parameters: [ $
+		'juls','glat','glon','mlat','mlon','mlt','vh','azm','hemi' $
+	],  $
+	nrecs: 0L $
+}
 
-common rt_data_blk, rt_data, rt_info
+common tec_data_blk, $
+	tec_data, tec_info, $
+	tec_median, median_info, $
+	tec_avg
+tec_info = { sjul: 0.0d, $
+	fjul: 0.0d, $
+	parameters: ['juls','glat','glon','tec','dtec'], nrecs: 0L $
+}
+median_info = { dlat: 0, $
+	dlon: 0, $
+	slat: 0, $
+	thresh: 0.0 $
+}
+
+common rt_data_blk, rt_data, rt_info, rt_rays
+.run rtStruct
 
 common recent_panel, rxmaps, rymaps, rxmap, rymap
 
 ; compile all RST routines
 @startup
+;.run datamap.pro
+;.run time.pro
+;.run radar.pro
+;.run rprm.pro
 
-common radarinfo
+common radarinfo, network
 
 ; set some variables for the X device
 if strupcase(!d.name) eq 'X' then begin & device, retain=2 & device, true_color=24 & device, decomposed=0 & end
+
+; we set this so that Themis doesn't
+!prompt = 'DaViT> '
+
+; init TDAS without the colors
+thm_init, /no_color_setup
+
+; init colors and radars
+init_colors
+rad_load_colortable
+rad_init_radars
+rad_cpid_read_table
+init_colors
 
 ; set initial values
 set_format, /landscape
@@ -395,23 +481,12 @@ set_editor, 'gedit'
 ps_set_filename, ''
 ps_set_isopen, !false
 
-; we set this so that Themis doesn't
-!prompt = 'DaViT> '
-
-; init TDAS without the colors
-thm_init, /no_color_setup
-
-; init colors and radars
-init_colors
-rad_load_colortable
-rad_init_radars
-init_colors
-
 ; set font and another variable such that
 ; the plot area is not cleared before calls
 ; to PLOT etc.
 !p.font = -1
 !p.noerase = 1
+!p.charthick = 2
 
 ; get default date labels
 dd = label_date(date_format='%h:%i')
